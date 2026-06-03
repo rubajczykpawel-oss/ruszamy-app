@@ -1,0 +1,20 @@
+# Sekrety i konfiguracja lokalna
+.env
+backend/.env
+
+# Python - pliki generowane automatycznie
+__pycache__/
+*.pyc
+
+# Środowiska wirtualne
+.venv/
+venv/
+backend/.venv/
+backend/venv/
+
+# Edytory
+.idea/
+.vscode/
+
+# Lokalne bazy danych
+*.db
