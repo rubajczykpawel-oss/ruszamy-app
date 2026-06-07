@@ -113,3 +113,14 @@ class GroupMemberResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class GroupMemberWithUserResponse(BaseModel):
+    id: int
+    group_id: int
+    user_id: int
+    role: str
+    joined_at: datetime
+    user: UserResponse
+
+    class Config:
+        from_attributes = True

@@ -224,3 +224,37 @@ def remove_member_from_group(
     return {
         "message": "Usunięto użytkownika z grupy"
     }
+
+def get_group_members(
+    group_id: int,
+    db: Session,
+    current_user: User    
+) -> list[GroupMember]:
+    group = db.query(ActivityGroup).filter(ActivityGroup.id == group_id).first()
+
+    if group is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Nie znaleziono grupy"
+        )
+    
+    current_user_membership = (
+        db.query(GroupMember)
+        .filter(GroupMember.id == group_id)
+        .filter(GroupMember.user_id == current_user.id).first()   
+    )
+
+    if current_user_membership is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Nie jesteś członkiem grupy"
+        )
+    
+    members = (
+        db.query(GroupMember)
+        .filter(GroupMember.group_id == group_id).all()
+    )
+
+    return members
+
+    

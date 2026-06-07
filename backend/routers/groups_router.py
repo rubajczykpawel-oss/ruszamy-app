@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from auth import get_current_user
 from database import get_db
 from models import User
-from schemas import GroupCreate, GroupMemberResponse, GroupResponse
+from schemas import GroupCreate, GroupMemberResponse, GroupResponse, GroupMemberWithUserResponse
 from services import groups_service
 
 
@@ -37,6 +37,17 @@ def get_my_groups_endpoint(
         current_user=current_user
     )
 
+@router.get("/{group_id}/members", response_model=list[GroupMemberWithUserResponse])
+def get_groups_endpoint(
+    group_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return groups_service.get_group_members(
+        group_id=group_id,
+        db=db,
+        current_user=current_user
+    )
 
 @router.get("/{group_id}", response_model=GroupResponse)
 def get_group_details_endpoint(
