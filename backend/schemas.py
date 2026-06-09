@@ -60,6 +60,7 @@ class EventResponse(BaseModel):
     date: date
     time: time
     max_participants: int
+    participants_count: int = 0
     level: str
     age_min: Optional[int] = None
     age_max: Optional[int] = None
@@ -119,6 +120,16 @@ class GroupMemberWithUserResponse(BaseModel):
     group_id: int
     user_id: int
     role: str
+    joined_at: datetime
+    user: UserResponse
+
+    class Config:
+        from_attributes = True
+
+class EventParticipantWithUserResponse(BaseModel):
+    id: int
+    event_id: int
+    user_id: int
     joined_at: datetime
     user: UserResponse
 

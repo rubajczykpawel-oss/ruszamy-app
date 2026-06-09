@@ -240,7 +240,7 @@ def get_group_members(
     
     current_user_membership = (
         db.query(GroupMember)
-        .filter(GroupMember.id == group_id)
+        .filter(GroupMember.group_id == group_id)
         .filter(GroupMember.user_id == current_user.id).first()   
     )
 

@@ -4,6 +4,18 @@ from sqlalchemy.orm import Session
 from models import Event, EventParticipant, GroupMember, User
 from schemas import EventCreate
 
+def add_participants_count(
+        event: Event,
+        db: Session
+) -> Event:
+    participants_count = (
+        db.query(EventParticipant)
+        .filter(EventParticipant.event_id == event.id).count()
+    )
+    
+    event.participants_count = participants_count
+
+    return event
 
 def create_event(
     event_data: EventCreate,
@@ -59,7 +71,7 @@ def create_event(
     db.add(creator_participation)
     db.commit()
 
-    return new_event
+    return add_participants_count(new_event, db)
 
 
 def get_events(
@@ -77,7 +89,12 @@ def get_events(
 
     events = query.order_by(Event.date.asc(), Event.time.asc()).all()
 
-    return events
+    events_with_count = [
+        add_participants_count(event, db)
+        for event in events
+    ]
+
+    return events_with_count
 
 
 def get_event_details(
@@ -107,7 +124,8 @@ def get_event_details(
                 detail="To wydarzenie jest dostępne tylko dla członków grupy"
             )
 
-    return event
+    return add_participants_count(event, db)
+
 
 
 def join_event(
@@ -213,7 +231,12 @@ def get_my_events(
 
     events = [participation.event for participation in participations]
 
-    return events
+    events_with_count = [
+        add_participants_count(event, db)
+        for event in events
+    ]
+
+    return events_with_count
 
 def delete_event(
     event_id: int,
@@ -242,3 +265,38 @@ def delete_event(
     return{
         "message": "Usunięto wydarzenie"
     }
+
+def get_event_participants(
+    event_id: int,
+    db: Session,
+    current_user: User
+) -> list[EventParticipant]:
+    event = db.query(Event).filter(Event.id == event_id).first()
+
+    if event is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Nie znaleziono wydarzenia"
+        )
+
+    if event.group_id is not None:
+        group_member = (
+            db.query(GroupMember)
+            .filter(GroupMember.group_id == event.group_id)
+            .filter(GroupMember.user_id == current_user.id)
+            .first()
+        )
+
+        if group_member is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Uczestników wydarzenia grupowego mogą zobaczyć tylko członkowie grupy"
+            )
+
+    participants = (
+        db.query(EventParticipant)
+        .filter(EventParticipant.event_id == event_id)
+        .all()
+    )
+
+    return participants

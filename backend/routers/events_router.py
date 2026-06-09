@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from auth import get_current_user
 from database import get_db
 from models import User
-from schemas import EventCreate, EventResponse
+from schemas import EventCreate, EventResponse, EventParticipantWithUserResponse
 from services import events_service
 
 router = APIRouter(
@@ -42,6 +42,18 @@ def get_my_events_endpoint(
     current_user: User = Depends(get_current_user)
 ):
     return events_service.get_my_events(
+        db=db,
+        current_user=current_user
+    )
+
+@router.get("/{event_id}/participants", response_model=list[EventParticipantWithUserResponse])
+def get_event_participants_endpoint(
+    event_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return events_service.get_event_participants(
+        event_id=event_id,
         db=db,
         current_user=current_user
     )
