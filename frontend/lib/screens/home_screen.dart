@@ -9,6 +9,7 @@ import '../widgets/profile_header.dart';
 import 'event_details_screen.dart';
 import 'login_screen.dart';
 import 'my_events_screen.dart';
+import 'my_groups_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String token;
@@ -145,6 +146,21 @@ class _HomeScreenState extends State<HomeScreen> {
     loadEvents();
   }
 
+  Future<void> openMyGroups() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) {
+          return MyGroupsScreen(
+            token: widget.token,
+          );
+        },
+      ),
+    );
+
+    loadEvents();
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isLoading = isLoadingProfile || isLoadingEvents;
@@ -208,6 +224,45 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           FilledButton(
                             onPressed: openMyEvents,
+                            child: const Text('Otwórz'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Card(
+                    color: Colors.blue.shade50,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.groups,
+                            size: 32,
+                            color: Colors.blue,
+                          ),
+                          const SizedBox(width: 16),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Moje grupy',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Zobacz grupy, do których należysz.',
+                                ),
+                              ],
+                            ),
+                          ),
+                          FilledButton(
+                            onPressed: openMyGroups,
                             child: const Text('Otwórz'),
                           ),
                         ],
