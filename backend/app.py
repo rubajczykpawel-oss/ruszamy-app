@@ -5,8 +5,8 @@ from routers import auth_router, users_router, events_router, groups_router, fri
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title="Ruszamy Api",
-    description="Api do aplikacji Wyjdżmy na dwór ",
+    title="Ruszamy API",
+    description="API do aplikacji Wyjdźmy na dwór",
     version="0.1.0"
 )
 
