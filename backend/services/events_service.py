@@ -198,6 +198,20 @@ def leave_event(
     db: Session,
     current_user: User
 ) -> dict:
+    event = db.query(Event).filter(Event.id == event_id).first()
+
+    if event is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Nie znaleziono wydarzenia"
+        )
+
+    if event.creator_id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Twórca wydarzenia nie może opuścić własnego wydarzenia. Może je usunąć."
+        )
+
     participation = (
         db.query(EventParticipant)
         .filter(EventParticipant.event_id == event_id)
