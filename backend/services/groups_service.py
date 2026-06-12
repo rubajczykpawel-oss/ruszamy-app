@@ -2,7 +2,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from models import ActivityGroup, Event, EventParticipant, GroupMember, User
-from schemas import GroupCreate
+from schemas import GroupCreate, GroupUpdate
 from services.friends_service import are_users_friends
 
 
@@ -295,3 +295,41 @@ def delete_group(
     return {
         "message": "Usunięto grupę"
     }
+
+def update_group(
+    group_id: int,
+    group_data: GroupUpdate,
+    db: Session,
+    current_user: User
+) -> ActivityGroup:
+    group = db.query(ActivityGroup).filter(ActivityGroup.id == group_id).first()
+
+    if group is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Nie znaleziono grupy"
+        )
+    
+    if group.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tylko właściciel grupy może edytować grupę"
+        )
+    
+    if group_data.name is not None:
+        group.name = group_data.name
+
+    if group_data.description is not None:
+        group.description = group_data.description
+
+    if group_data.city is not None:
+        group.city = group_data.city
+
+    if group_data.activity_type is not None:
+        group.activity_type = group_data.activity_type
+
+    db.commit()
+    db.refresh(group)
+
+    return group
+    

@@ -114,6 +114,12 @@ class GroupCreate(BaseModel):
     city: str
     activity_type: str
 
+class GroupUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    city: Optional[str] = None
+    activity_type: Optional[str] = None
+
 
 class GroupResponse(BaseModel):
     id: int
