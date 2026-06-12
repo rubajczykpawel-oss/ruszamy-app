@@ -1,4 +1,4 @@
-from datetime import datetime, date, time
+from datetime import datetime, date as DateType, time as TimeType
 from typing import Optional
 
 from pydantic import BaseModel
@@ -46,14 +46,31 @@ class EventCreate(BaseModel):
     activity_type: str
     city: str
     location_name: str
-    date: date
-    time: time
+    date: DateType
+    time: TimeType
     max_participants: int
     level: str
     age_min: Optional[int] = None
     age_max: Optional[int] = None
     is_public: bool = True
     group_id: Optional[int] = None
+
+
+class EventUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    activity_type: Optional[str] = None
+    city: Optional[str] = None
+    location_name: Optional[str] = None
+    date: Optional[DateType] = None
+    time: Optional[TimeType] = None
+    max_participants: Optional[int] = None
+    level: Optional[str] = None
+    age_min: Optional[int] = None
+    age_max: Optional[int] = None
+    is_public: Optional[bool] = None
+    group_id: Optional[int] = None
+
 
 
 class EventResponse(BaseModel):
@@ -63,8 +80,8 @@ class EventResponse(BaseModel):
     activity_type: str
     city: str
     location_name: str
-    date: date
-    time: time
+    date: DateType
+    time: TimeType
     max_participants: int
     participants_count: int = 0
     level: str

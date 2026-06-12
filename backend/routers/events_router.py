@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 
 from auth import get_current_user
 from database import get_db
-from models import User
-from schemas import EventCreate, EventResponse, EventParticipantWithUserResponse
+from models import User 
+from schemas import EventCreate, EventResponse, EventUpdate, EventParticipantWithUserResponse
 from services import events_service
 
 router = APIRouter(
@@ -94,11 +94,25 @@ def leave_event_endpoint(
         current_user=current_user    
     )
 
+@router.put("/{event_id}", response_model=EventResponse)
+def update_event_endpoint(
+    event_id: int,
+    event_data: EventUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return events_service.update_event(
+        event_id=event_id,
+        event_data=event_data,
+        db=db,
+        current_user=current_user
+    )
+
 @router.delete("/{event_id}")
 def delete_event_endpoint(
     event_id: int,
     db: Session = Depends(get_db),
-    current_user: User =Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     return events_service.delete_event(
         event_id=event_id,

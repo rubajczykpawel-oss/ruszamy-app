@@ -2,7 +2,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from models import Event, EventParticipant, GroupMember, User
-from schemas import EventCreate
+from schemas import EventCreate, EventUpdate
 
 def add_participants_count(
         event: Event,
@@ -300,3 +300,97 @@ def get_event_participants(
     )
 
     return participants
+
+def update_event(
+    event_id: int,
+    event_data: EventUpdate,
+    db: Session,
+    current_user: User
+) -> Event:
+    event = db.query(Event).filter(Event.id == event_id).first()
+
+    if event is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Nie znaleziono wydarzenia"
+        )
+    
+    if event.creator_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Możesz edytować tylko wydarzenie, które sam stworzyłeś"
+        )
+    
+    if event_data.max_participants is not None:
+        if event_data.max_participants <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Limit uczestników musi być większy od 0"
+            )
+        
+        participants_count = (
+            db.query(EventParticipant)
+            .filter(EventParticipant.event_id == event_id)
+            .count()
+        )
+
+        if event_data.max_participants < participants_count:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Nowy limit uczestników nie może być mniejszy niż obecna liczba zapisanych osób"
+            )
+        
+        event.max_participants = event_data.max_participants
+
+    if event_data.group_id is not None:
+        group_member = (
+            db.query(GroupMember)
+            .filter(GroupMember.group_id == event_data.group_id)
+            .filter(GroupMember.user_id == current_user.id).first()
+        )
+
+        if group_member is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Nie jesteś członkiem grupy"
+            )
+    
+    event.group_id = event_data.group_id
+
+    if event_data.title is not None:
+        event.title = event_data.title
+
+    if event_data.description is not None:
+        event.description = event_data.description
+
+    if event_data.activity_type is not None:
+        event.activity_type = event_data.activity_type
+
+    if event_data.city is not None:
+        event.city = event_data.city
+
+    if event_data.location_name is not None:
+        event.location_name = event_data.location_name
+
+    if event_data.date is not None:
+        event.date = event_data.date
+
+    if event_data.time is not None:
+        event.time = event_data.time
+
+    if event_data.level is not None:
+        event.level = event_data.level
+
+    if event_data.age_min is not None:
+        event.age_min = event_data.age_min
+
+    if event_data.age_max is not None:
+        event.age_max = event_data.age_max
+
+    if event_data.is_public is not None:
+        event.is_public = event_data.is_public
+
+    db.commit()
+    db.refresh(event)
+
+    return add_participants_count(event, db)
