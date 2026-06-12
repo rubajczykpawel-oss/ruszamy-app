@@ -8,6 +8,7 @@ import '../widgets/event_card.dart';
 import '../widgets/profile_header.dart';
 import 'event_details_screen.dart';
 import 'login_screen.dart';
+import 'my_events_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String token;
@@ -129,6 +130,21 @@ class _HomeScreenState extends State<HomeScreen> {
     loadEvents();
   }
 
+  Future<void> openMyEvents() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) {
+          return MyEventsScreen(
+            token: widget.token,
+          );
+        },
+      ),
+    );
+
+    loadEvents();
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isLoading = isLoadingProfile || isLoadingEvents;
@@ -159,6 +175,45 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.all(16),
                 children: [
                   ProfileHeader(profile: profile),
+                  const SizedBox(height: 12),
+                  Card(
+                    color: Colors.green.shade50,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.event_available,
+                            size: 32,
+                            color: Colors.green,
+                          ),
+                          const SizedBox(width: 16),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Moje wydarzenia',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Zobacz eventy, do których jesteś zapisany.',
+                                ),
+                              ],
+                            ),
+                          ),
+                          FilledButton(
+                            onPressed: openMyEvents,
+                            child: const Text('Otwórz'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   const Text(
                     'Publiczne wydarzenia',

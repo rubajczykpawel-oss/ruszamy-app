@@ -22,6 +22,33 @@ class EventsApiService {
     }).toList();
   }
 
+  Future<List<AppEvent>> getMyEvents({
+    required String token,
+  }) async {
+    final Uri url = Uri.parse('${ApiConfig.baseUrl}/events/my');
+
+    final http.Response response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      final Map<String, dynamic> data = jsonDecode(response.body);
+
+      throw Exception(
+        data['detail'] ?? 'Nie udało się pobrać Twoich wydarzeń',
+      );
+    }
+
+    final List<dynamic> data = jsonDecode(response.body);
+
+    return data.map((item) {
+      return AppEvent.fromJson(item);
+    }).toList();
+  }
+
   Future<AppEvent> getEventDetails({
     required int eventId,
     required String token,
@@ -59,7 +86,10 @@ class EventsApiService {
 
     if (response.statusCode != 200) {
       final Map<String, dynamic> data = jsonDecode(response.body);
-      throw Exception(data['detail'] ?? 'Nie udało się dołączyć do wydarzenia');
+
+      throw Exception(
+        data['detail'] ?? 'Nie udało się dołączyć do wydarzenia',
+      );
     }
   }
 
@@ -78,7 +108,10 @@ class EventsApiService {
 
     if (response.statusCode != 200) {
       final Map<String, dynamic> data = jsonDecode(response.body);
-      throw Exception(data['detail'] ?? 'Nie udało się opuścić wydarzenia');
+
+      throw Exception(
+        data['detail'] ?? 'Nie udało się opuścić wydarzenia',
+      );
     }
   }
 }
