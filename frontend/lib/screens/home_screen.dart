@@ -6,6 +6,7 @@ import '../services/auth_api_service.dart';
 import '../services/events_api_service.dart';
 import '../widgets/event_card.dart';
 import '../widgets/profile_header.dart';
+import 'event_details_screen.dart';
 import 'login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -112,6 +113,22 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<void> openEventDetails(AppEvent event) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) {
+          return EventDetailsScreen(
+            eventId: event.id,
+            token: widget.token,
+          );
+        },
+      ),
+    );
+
+    loadEvents();
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isLoading = isLoadingProfile || isLoadingEvents;
@@ -173,7 +190,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     )
                   else
                     ...events.map((event) {
-                      return EventCard(event: event);
+                      return EventCard(
+                        event: event,
+                        onTap: () {
+                          openEventDetails(event);
+                        },
+                      );
                     }),
                 ],
               ),
