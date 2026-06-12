@@ -12,6 +12,12 @@ class UserCreate(BaseModel):
     age: Optional[int] = None
 
 
+class UserUpdate(BaseModel):
+    username: Optional[str] = None
+    city: Optional[str] = None
+    age: Optional[int] = None
+
+
 class UserResponse(BaseModel):
     id: int
     email: str
