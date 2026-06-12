@@ -103,3 +103,14 @@ def remove_member_from_group_endpoint(
         db=db,
         current_user=current_user
     )
+@router.delete("/{group_id}")
+def delete_group_endpoint(
+    group_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return groups_service.delete_group(
+        group_id=group_id,
+        db=db,
+        current_user=current_user
+    )

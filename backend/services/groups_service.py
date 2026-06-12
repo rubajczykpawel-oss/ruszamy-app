@@ -1,7 +1,7 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from models import ActivityGroup, GroupMember, User
+from models import ActivityGroup, Event, EventParticipant, GroupMember, User
 from schemas import GroupCreate
 from services.friends_service import are_users_friends
 
@@ -257,4 +257,41 @@ def get_group_members(
 
     return members
 
+def delete_group(
+        group_id: int,
+        db: Session,
+        current_user: User
+) -> dict:
+    group = db.query(ActivityGroup).filter(ActivityGroup.id == group_id).first()
+
+    if group is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Nie znaleziono grupy"
+        )
     
+    if group.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tylko właściciel grupy może usunąć grupę"
+        )
+    
+    group_events = (db.query(Event).filter(Event.group_id == group_id).all())
+
+    for event in group_events:
+        db.query(EventParticipant).filter(
+            EventParticipant.event_id == event.id
+        ).delete()
+
+        db.delete(event)
+
+    db.query(GroupMember).filter(
+        GroupMember.group_id == group_id
+    ).delete()
+
+    db.delete(group)
+    db.commit()
+
+    return {
+        "message": "Usunięto grupę"
+    }
