@@ -1,0 +1,183 @@
+import 'package:flutter/material.dart';
+
+import '../models/app_event.dart';
+import '../models/user_profile.dart';
+import '../services/auth_api_service.dart';
+import '../services/events_api_service.dart';
+import '../widgets/event_card.dart';
+import '../widgets/profile_header.dart';
+import 'login_screen.dart';
+
+class HomeScreen extends StatefulWidget {
+  final String token;
+
+  const HomeScreen({
+    super.key,
+    required this.token,
+  });
+
+  @override
+  State<HomeScreen> createState() {
+    return _HomeScreenState();
+  }
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final AuthApiService authApiService = AuthApiService();
+  final EventsApiService eventsApiService = EventsApiService();
+
+  bool isLoadingProfile = true;
+  bool isLoadingEvents = true;
+
+  String errorMessage = '';
+
+  UserProfile? profile;
+  List<AppEvent> events = [];
+
+  @override
+  void initState() {
+    super.initState();
+
+    loadData();
+  }
+
+  Future<void> loadData() async {
+    await Future.wait([
+      loadProfile(),
+      loadEvents(),
+    ]);
+  }
+
+  Future<void> loadProfile() async {
+    setState(() {
+      isLoadingProfile = true;
+      errorMessage = '';
+    });
+
+    try {
+      final UserProfile loadedProfile = await authApiService.getCurrentUser(
+        token: widget.token,
+      );
+
+      setState(() {
+        profile = loadedProfile;
+      });
+    } catch (error) {
+      setState(() {
+        errorMessage = error.toString().replaceFirst('Exception: ', '');
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoadingProfile = false;
+        });
+      }
+    }
+  }
+
+  Future<void> loadEvents() async {
+    setState(() {
+      isLoadingEvents = true;
+      errorMessage = '';
+    });
+
+    try {
+      final List<AppEvent> loadedEvents =
+          await eventsApiService.getPublicEvents();
+
+      setState(() {
+        events = loadedEvents;
+      });
+    } catch (error) {
+      setState(() {
+        errorMessage = error.toString().replaceFirst('Exception: ', '');
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoadingEvents = false;
+        });
+      }
+    }
+  }
+
+  void logout() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) {
+          return const LoginScreen();
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isLoading = isLoadingProfile || isLoadingEvents;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Ruszamy App'),
+        actions: [
+          IconButton(
+            onPressed: loadData,
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Odśwież',
+          ),
+          IconButton(
+            onPressed: logout,
+            icon: const Icon(Icons.logout),
+            tooltip: 'Wyloguj',
+          ),
+        ],
+      ),
+      body: isLoading
+          ? const Center(
+              child: CircularProgressIndicator(),
+            )
+          : RefreshIndicator(
+              onRefresh: loadData,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  ProfileHeader(profile: profile),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Publiczne wydarzenia',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (errorMessage.isNotEmpty)
+                    Card(
+                      color: Colors.red.shade50,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Text(
+                          errorMessage,
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      ),
+                    ),
+                  if (events.isEmpty)
+                    const Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Text(
+                          'Brak publicznych wydarzeń. Utwórz event w Swaggerze przez POST /events.',
+                        ),
+                      ),
+                    )
+                  else
+                    ...events.map((event) {
+                      return EventCard(event: event);
+                    }),
+                ],
+              ),
+            ),
+    );
+  }
+}
