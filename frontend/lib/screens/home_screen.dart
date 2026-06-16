@@ -7,6 +7,7 @@ import '../services/events_api_service.dart';
 import '../widgets/event_card.dart';
 import '../widgets/profile_header.dart';
 import 'create_event_screen.dart';
+import 'create_group_screen.dart';
 import 'event_details_screen.dart';
 import 'login_screen.dart';
 import 'my_events_screen.dart';
@@ -42,7 +43,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-
     loadData();
   }
 
@@ -138,6 +138,21 @@ class _HomeScreenState extends State<HomeScreen> {
       MaterialPageRoute(
         builder: (context) {
           return CreateEventScreen(
+            token: widget.token,
+          );
+        },
+      ),
+    );
+
+    loadEvents();
+  }
+
+  Future<void> openCreateGroup() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) {
+          return CreateGroupScreen(
             token: widget.token,
           );
         },
@@ -248,9 +263,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 ),
                                 SizedBox(height: 4),
-                                Text(
-                                  'Zobacz i edytuj swoje dane.',
-                                ),
+                                Text('Zobacz i edytuj swoje dane.'),
                               ],
                             ),
                           ),
@@ -287,14 +300,49 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 ),
                                 SizedBox(height: 4),
-                                Text(
-                                  'Utwórz nowy event bez używania Swaggera.',
-                                ),
+                                Text('Utwórz nowy event bez używania Swaggera.'),
                               ],
                             ),
                           ),
                           FilledButton(
                             onPressed: openCreateEvent,
+                            child: const Text('Otwórz'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Card(
+                    color: Colors.teal.shade50,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.group_add,
+                            size: 32,
+                            color: Colors.teal,
+                          ),
+                          const SizedBox(width: 16),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Dodaj grupę',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text('Utwórz nową grupę bez używania Swaggera.'),
+                              ],
+                            ),
+                          ),
+                          FilledButton(
+                            onPressed: openCreateGroup,
                             child: const Text('Otwórz'),
                           ),
                         ],
@@ -326,9 +374,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 ),
                                 SizedBox(height: 4),
-                                Text(
-                                  'Zobacz eventy, do których jesteś zapisany.',
-                                ),
+                                Text('Zobacz eventy, do których jesteś zapisany.'),
                               ],
                             ),
                           ),
@@ -365,9 +411,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 ),
                                 SizedBox(height: 4),
-                                Text(
-                                  'Zobacz grupy, do których należysz.',
-                                ),
+                                Text('Zobacz grupy, do których należysz.'),
                               ],
                             ),
                           ),

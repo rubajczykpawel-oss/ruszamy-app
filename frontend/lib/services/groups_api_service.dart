@@ -87,4 +87,42 @@ class GroupsApiService {
       return GroupMember.fromJson(item);
     }).toList();
   }
+
+  Future<AppGroup> createGroup({
+    required String token,
+    required String name,
+    required String description,
+    required String city,
+    required String activityType,
+  }) async {
+    final Uri url = Uri.parse('${ApiConfig.baseUrl}/groups');
+
+    final Map<String, dynamic> body = {
+      'name': name.trim(),
+      'description': description.trim(),
+      'city': city.trim(),
+      'activity_type': activityType.trim(),
+    };
+
+    final http.Response response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      final Map<String, dynamic> data = jsonDecode(response.body);
+
+      throw Exception(
+        data['detail'] ?? 'Nie udało się utworzyć grupy',
+      );
+    }
+
+    final Map<String, dynamic> data = jsonDecode(response.body);
+
+    return AppGroup.fromJson(data);
+  }
 }
