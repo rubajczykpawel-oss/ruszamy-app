@@ -912,7 +912,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget buildMyEventPreviewRow(AppEvent event) {
     return InkWell(
-      onTap: openMyEvents,
+      onTap: () {
+        openEventDetails(event);
+      },
       borderRadius: BorderRadius.circular(10),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),
