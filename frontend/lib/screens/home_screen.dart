@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../models/app_event.dart';
+import '../models/app_group.dart';
 import '../models/user_profile.dart';
 import '../services/auth_api_service.dart';
 import '../services/events_api_service.dart';
 import '../services/friends_api_service.dart';
+import '../services/groups_api_service.dart';
 import '../widgets/event_card.dart';
 import '../widgets/profile_header.dart';
 import 'create_event_screen.dart';
@@ -35,12 +37,14 @@ class _HomeScreenState extends State<HomeScreen> {
   final AuthApiService authApiService = AuthApiService();
   final EventsApiService eventsApiService = EventsApiService();
   final FriendsApiService friendsApiService = FriendsApiService();
+  final GroupsApiService groupsApiService = GroupsApiService();
 
   final GlobalKey publicEventsKey = GlobalKey();
 
   bool isLoadingProfile = true;
   bool isLoadingEvents = true;
   bool isLoadingFriends = true;
+  bool isLoadingGroups = true;
 
   bool isFriendsExpanded = true;
   bool isEventsExpanded = true;
@@ -55,6 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
   UserProfile? profile;
   List<AppEvent> events = [];
   List<UserProfile> friends = [];
+  List<AppGroup> groups = [];
 
   @override
   void initState() {
@@ -68,6 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
       loadProfile(),
       loadEvents(),
       loadFriends(),
+      loadGroups(),
     ]);
   }
 
@@ -147,6 +153,33 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         setState(() {
           isLoadingFriends = false;
+        });
+      }
+    }
+  }
+
+  Future<void> loadGroups() async {
+    setState(() {
+      isLoadingGroups = true;
+      errorMessage = '';
+    });
+
+    try {
+      final List<AppGroup> loadedGroups = await groupsApiService.getMyGroups(
+        token: widget.token,
+      );
+
+      setState(() {
+        groups = loadedGroups;
+      });
+    } catch (error) {
+      setState(() {
+        errorMessage = error.toString().replaceFirst('Exception: ', '');
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoadingGroups = false;
         });
       }
     }
@@ -341,8 +374,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isLoading =
-        isLoadingProfile || isLoadingEvents || isLoadingFriends;
+    final bool isLoading = isLoadingProfile ||
+        isLoadingEvents ||
+        isLoadingFriends ||
+        isLoadingGroups;
 
     return Scaffold(
       appBar: AppBar(
@@ -489,6 +524,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 title: 'Moje grupy',
                 onTap: openMyGroups,
               ),
+              const SizedBox(height: 8),
+              buildGroupsPreview(),
             ],
           ),
           const SizedBox(height: 12),
@@ -698,6 +735,58 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget buildGroupsPreview() {
+    if (groups.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Text(
+          'Brak grup do pokazania.',
+          style: TextStyle(fontSize: 13),
+        ),
+      );
+    }
+
+    final List<AppGroup> previewGroups = groups.take(5).toList();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Twoje grupy (${groups.length})',
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ...previewGroups.map((group) {
+            return buildGroupPreviewRow(group);
+          }),
+          if (groups.length > 5)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                '+ ${groups.length - 5} więcej',
+                style: const TextStyle(fontSize: 12),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget buildFriendPreviewRow(UserProfile friend) {
     final String cityText = friend.city ?? 'Brak miasta';
 
@@ -731,6 +820,50 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   Text(
                     cityText,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildGroupPreviewRow(AppGroup group) {
+    return InkWell(
+      onTap: openMyGroups,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            const CircleAvatar(
+              radius: 14,
+              child: Icon(
+                Icons.groups,
+                size: 16,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    group.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                  Text(
+                    '${group.city} • ${group.activityType}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 12),
