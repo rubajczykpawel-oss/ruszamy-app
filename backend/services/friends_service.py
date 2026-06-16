@@ -211,3 +211,46 @@ def get_my_friends(
             friends.append(friendship.requester)
 
     return friends
+
+def remove_friend(
+    friend_id: int,
+    db: Session,
+    current_user: User
+) -> dict:
+    if friend_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Nie możesz usunąć samego siebie"
+        )
+    
+    friend = db.query(User).filter(User.id == friend_id).first()
+
+    if friend is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Nie znaleziono użytkownika"
+        )
+    
+    friendship = (
+                db.query(Friendship)
+                .filter(
+                    or_(
+                        (Friendship.requester_id == current_user.id) & (Friendship.receiver_id == friend_id),
+                        (Friendship.requester_id == friend_id) & (Friendship.receiver_id == current_user.id)
+                    )
+                )
+                .filter(Friendship.status == "accepted").first()
+    )
+
+    if friendship is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Nie znaleziono zaakceptowanej znajomości"
+        )
+    
+    db.delete(friendship)
+    db.commit()
+
+    return {
+        "message": "Znajomy został usunięty"
+    }

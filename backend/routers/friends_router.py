@@ -84,3 +84,15 @@ def get_my_friends_endpoint(
         db=db,
         current_user=current_user
     )
+
+@router.delete("/{friend_id}")
+def remove_friend_endpoint(
+    friend_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return friends_service.remove_friend(
+        friend_id=friend_id,
+        db=db,
+        current_user=current_user
+    )
