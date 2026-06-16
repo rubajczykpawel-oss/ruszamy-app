@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/app_event.dart';
 import '../services/events_api_service.dart';
 import '../widgets/info_chip.dart';
+import 'edit_event_screen.dart';
 
 class EventDetailsScreen extends StatefulWidget {
   final int eventId;
@@ -65,6 +66,22 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         });
       }
     }
+  }
+
+  Future<void> openEditEvent(AppEvent eventToEdit) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) {
+          return EditEventScreen(
+            token: widget.token,
+            event: eventToEdit,
+          );
+        },
+      ),
+    );
+
+    loadEventDetails();
   }
 
   Future<void> joinEvent() async {
@@ -225,8 +242,14 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                 icon: Icons.cake,
                 label: ageText,
               ),
+            InfoChip(
+              icon: Icons.person,
+              label: 'Creator ID: ${event.creatorId}',
+            ),
           ],
         ),
+        const SizedBox(height: 20),
+        buildEventActionsCard(event),
         const SizedBox(height: 20),
         if (errorMessage.isNotEmpty)
           Card(
@@ -269,6 +292,49 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget buildEventActionsCard(AppEvent event) {
+    return Card(
+      color: Colors.orange.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.edit,
+              size: 32,
+              color: Colors.orange,
+            ),
+            const SizedBox(width: 16),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Edycja wydarzenia',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Zmień tytuł, opis, miasto, datę albo limit uczestników.',
+                  ),
+                ],
+              ),
+            ),
+            FilledButton(
+              onPressed: () {
+                openEditEvent(event);
+              },
+              child: const Text('Edytuj'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

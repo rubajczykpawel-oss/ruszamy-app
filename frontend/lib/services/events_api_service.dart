@@ -140,6 +140,72 @@ class EventsApiService {
     return AppEvent.fromJson(data);
   }
 
+  Future<AppEvent> updateEvent({
+    required String token,
+    required int eventId,
+    required String title,
+    required String description,
+    required String activityType,
+    required String city,
+    required String locationName,
+    required String date,
+    required String time,
+    required String maxParticipants,
+    required String level,
+    required String ageMin,
+    required String ageMax,
+    required bool isPublic,
+    required String groupId,
+  }) async {
+    final Uri url = Uri.parse('${ApiConfig.baseUrl}/events/$eventId');
+
+    final int? parsedMaxParticipants = int.tryParse(maxParticipants.trim());
+    final int? parsedAgeMin = int.tryParse(ageMin.trim());
+    final int? parsedAgeMax = int.tryParse(ageMax.trim());
+    final int? parsedGroupId = int.tryParse(groupId.trim());
+
+    if (parsedMaxParticipants == null) {
+      throw Exception('Limit uczestników musi być liczbą');
+    }
+
+    final Map<String, dynamic> body = {
+      'title': title.trim(),
+      'description': description.trim(),
+      'activity_type': activityType.trim(),
+      'city': city.trim(),
+      'location_name': locationName.trim(),
+      'date': date.trim(),
+      'time': time.trim(),
+      'max_participants': parsedMaxParticipants,
+      'level': level.trim(),
+      'age_min': parsedAgeMin,
+      'age_max': parsedAgeMax,
+      'is_public': isPublic,
+      'group_id': parsedGroupId,
+    };
+
+    final http.Response response = await http.put(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode != 200) {
+      final Map<String, dynamic> data = jsonDecode(response.body);
+
+      throw Exception(
+        data['detail'] ?? 'Nie udało się zaktualizować wydarzenia',
+      );
+    }
+
+    final Map<String, dynamic> data = jsonDecode(response.body);
+
+    return AppEvent.fromJson(data);
+  }
+
   Future<void> joinEvent({
     required int eventId,
     required String token,
