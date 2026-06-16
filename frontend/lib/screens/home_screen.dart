@@ -43,6 +43,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   bool isLoadingProfile = true;
   bool isLoadingEvents = true;
+  bool isLoadingMyEvents = true;
   bool isLoadingFriends = true;
   bool isLoadingGroups = true;
 
@@ -58,6 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   UserProfile? profile;
   List<AppEvent> events = [];
+  List<AppEvent> myEvents = [];
   List<UserProfile> friends = [];
   List<AppGroup> groups = [];
 
@@ -72,6 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
     await Future.wait([
       loadProfile(),
       loadEvents(),
+      loadMyEvents(),
       loadFriends(),
       loadGroups(),
     ]);
@@ -125,6 +128,34 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         setState(() {
           isLoadingEvents = false;
+        });
+      }
+    }
+  }
+
+  Future<void> loadMyEvents() async {
+    setState(() {
+      isLoadingMyEvents = true;
+      errorMessage = '';
+    });
+
+    try {
+      final List<AppEvent> loadedMyEvents =
+          await eventsApiService.getMyEvents(
+        token: widget.token,
+      );
+
+      setState(() {
+        myEvents = loadedMyEvents;
+      });
+    } catch (error) {
+      setState(() {
+        errorMessage = error.toString().replaceFirst('Exception: ', '');
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoadingMyEvents = false;
         });
       }
     }
@@ -308,7 +339,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
 
-    loadEvents();
+    loadData();
   }
 
   Future<void> openCreateGroup() async {
@@ -339,7 +370,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
 
-    loadEvents();
+    loadData();
   }
 
   Future<void> openMyEvents() async {
@@ -354,7 +385,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
 
-    loadEvents();
+    loadData();
   }
 
   Future<void> openMyGroups() async {
@@ -376,6 +407,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final bool isLoading = isLoadingProfile ||
         isLoadingEvents ||
+        isLoadingMyEvents ||
         isLoadingFriends ||
         isLoadingGroups;
 
@@ -501,6 +533,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 title: 'Publiczne wydarzenia',
                 onTap: scrollToPublicEvents,
               ),
+              const SizedBox(height: 8),
+              buildMyEventsPreview(),
             ],
           ),
           const SizedBox(height: 8),
@@ -685,74 +719,86 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget buildFriendsPreview() {
     if (friends.isEmpty) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Text(
-          'Brak znajomych do pokazania.',
-          style: TextStyle(fontSize: 13),
-        ),
-      );
+      return buildEmptyPreviewBox('Brak znajomych do pokazania.');
     }
 
     final List<UserProfile> previewFriends = friends.take(5).toList();
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Twoi znajomi (${friends.length})',
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-            ),
+    return buildPreviewBox(
+      title: 'Twoi znajomi (${friends.length})',
+      children: [
+        ...previewFriends.map((friend) {
+          return buildFriendPreviewRow(friend);
+        }),
+        if (friends.length > 5)
+          buildMoreText(
+            '+ ${friends.length - 5} więcej',
           ),
-          const SizedBox(height: 8),
-          ...previewFriends.map((friend) {
-            return buildFriendPreviewRow(friend);
-          }),
-          if (friends.length > 5)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text(
-                '+ ${friends.length - 5} więcej',
-                style: const TextStyle(fontSize: 12),
-              ),
-            ),
-        ],
-      ),
+      ],
     );
   }
 
   Widget buildGroupsPreview() {
     if (groups.isEmpty) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Text(
-          'Brak grup do pokazania.',
-          style: TextStyle(fontSize: 13),
-        ),
-      );
+      return buildEmptyPreviewBox('Brak grup do pokazania.');
     }
 
     final List<AppGroup> previewGroups = groups.take(5).toList();
 
+    return buildPreviewBox(
+      title: 'Twoje grupy (${groups.length})',
+      children: [
+        ...previewGroups.map((group) {
+          return buildGroupPreviewRow(group);
+        }),
+        if (groups.length > 5)
+          buildMoreText(
+            '+ ${groups.length - 5} więcej',
+          ),
+      ],
+    );
+  }
+
+  Widget buildMyEventsPreview() {
+    if (myEvents.isEmpty) {
+      return buildEmptyPreviewBox('Brak Twoich wydarzeń do pokazania.');
+    }
+
+    final List<AppEvent> previewEvents = myEvents.take(5).toList();
+
+    return buildPreviewBox(
+      title: 'Twoje wydarzenia (${myEvents.length})',
+      children: [
+        ...previewEvents.map((event) {
+          return buildMyEventPreviewRow(event);
+        }),
+        if (myEvents.length > 5)
+          buildMoreText(
+            '+ ${myEvents.length - 5} więcej',
+          ),
+      ],
+    );
+  }
+
+  Widget buildEmptyPreviewBox(String text) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 13),
+      ),
+    );
+  }
+
+  Widget buildPreviewBox({
+    required String title,
+    required List<Widget> children,
+  }) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -764,25 +810,25 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Twoje grupy (${groups.length})',
+            title,
             style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 13,
             ),
           ),
           const SizedBox(height: 8),
-          ...previewGroups.map((group) {
-            return buildGroupPreviewRow(group);
-          }),
-          if (groups.length > 5)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text(
-                '+ ${groups.length - 5} więcej',
-                style: const TextStyle(fontSize: 12),
-              ),
-            ),
+          ...children,
         ],
+      ),
+    );
+  }
+
+  Widget buildMoreText(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 12),
       ),
     );
   }
@@ -806,25 +852,9 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    friend.username,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                  ),
-                  Text(
-                    cityText,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ],
+              child: buildPreviewTextColumn(
+                title: friend.username,
+                subtitle: cityText,
               ),
             ),
           ],
@@ -850,30 +880,68 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    group.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                  ),
-                  Text(
-                    '${group.city} • ${group.activityType}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ],
+              child: buildPreviewTextColumn(
+                title: group.name,
+                subtitle: '${group.city} • ${group.activityType}',
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget buildMyEventPreviewRow(AppEvent event) {
+    return InkWell(
+      onTap: openMyEvents,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            const CircleAvatar(
+              radius: 14,
+              child: Icon(
+                Icons.event,
+                size: 16,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: buildPreviewTextColumn(
+                title: event.title,
+                subtitle: '${event.city} • ${event.date} ${event.time}',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildPreviewTextColumn({
+    required String title,
+    required String subtitle,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+          ),
+        ),
+        Text(
+          subtitle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 12),
+        ),
+      ],
     );
   }
 
