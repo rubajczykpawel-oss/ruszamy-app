@@ -19,6 +19,7 @@ import 'login_screen.dart';
 import 'my_events_screen.dart';
 import 'my_groups_screen.dart';
 import 'profile_screen.dart';
+import 'user_details_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String token;
@@ -320,6 +321,21 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (context) {
           return FriendRequestsScreen(
             token: widget.token,
+          );
+        },
+      ),
+    );
+
+    loadData();
+  }
+
+  Future<void> openUserDetails(UserProfile user) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) {
+          return UserDetailsScreen(
+            user: user,
           );
         },
       ),
@@ -854,7 +870,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final String cityText = friend.city ?? 'Brak miasta';
 
     return InkWell(
-      onTap: openFriendRequests,
+      onTap: () {
+        openUserDetails(friend);
+      },
       borderRadius: BorderRadius.circular(10),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),
