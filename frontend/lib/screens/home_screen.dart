@@ -4,6 +4,7 @@ import '../models/app_event.dart';
 import '../models/user_profile.dart';
 import '../services/auth_api_service.dart';
 import '../services/events_api_service.dart';
+import '../services/friends_api_service.dart';
 import '../widgets/event_card.dart';
 import '../widgets/profile_header.dart';
 import 'create_event_screen.dart';
@@ -33,11 +34,13 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final AuthApiService authApiService = AuthApiService();
   final EventsApiService eventsApiService = EventsApiService();
+  final FriendsApiService friendsApiService = FriendsApiService();
 
   final GlobalKey publicEventsKey = GlobalKey();
 
   bool isLoadingProfile = true;
   bool isLoadingEvents = true;
+  bool isLoadingFriends = true;
 
   bool isFriendsExpanded = true;
   bool isEventsExpanded = true;
@@ -51,6 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   UserProfile? profile;
   List<AppEvent> events = [];
+  List<UserProfile> friends = [];
 
   @override
   void initState() {
@@ -63,6 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
     await Future.wait([
       loadProfile(),
       loadEvents(),
+      loadFriends(),
     ]);
   }
 
@@ -114,6 +119,34 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         setState(() {
           isLoadingEvents = false;
+        });
+      }
+    }
+  }
+
+  Future<void> loadFriends() async {
+    setState(() {
+      isLoadingFriends = true;
+      errorMessage = '';
+    });
+
+    try {
+      final List<UserProfile> loadedFriends =
+          await friendsApiService.getMyFriends(
+        token: widget.token,
+      );
+
+      setState(() {
+        friends = loadedFriends;
+      });
+    } catch (error) {
+      setState(() {
+        errorMessage = error.toString().replaceFirst('Exception: ', '');
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoadingFriends = false;
         });
       }
     }
@@ -308,7 +341,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isLoading = isLoadingProfile || isLoadingEvents;
+    final bool isLoading =
+        isLoadingProfile || isLoadingEvents || isLoadingFriends;
 
     return Scaffold(
       appBar: AppBar(
@@ -402,6 +436,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 title: 'Moi znajomi i zaproszenia',
                 onTap: openFriendRequests,
               ),
+              const SizedBox(height: 8),
+              buildFriendsPreview(),
             ],
           ),
           const SizedBox(height: 8),
@@ -479,8 +515,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           if (showMobileNavigationCards) ProfileHeader(profile: profile),
           if (showMobileNavigationCards) const SizedBox(height: 12),
-          if (showMobileNavigationCards)
-            buildNavigationCardsForMobile(),
+          if (showMobileNavigationCards) buildNavigationCardsForMobile(),
           if (showMobileNavigationCards) const SizedBox(height: 16),
           Container(
             key: publicEventsKey,
@@ -608,6 +643,104 @@ class _HomeScreenState extends State<HomeScreen> {
           onPressed: openMyGroups,
         ),
       ],
+    );
+  }
+
+  Widget buildFriendsPreview() {
+    if (friends.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Text(
+          'Brak znajomych do pokazania.',
+          style: TextStyle(fontSize: 13),
+        ),
+      );
+    }
+
+    final List<UserProfile> previewFriends = friends.take(5).toList();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Twoi znajomi (${friends.length})',
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ...previewFriends.map((friend) {
+            return buildFriendPreviewRow(friend);
+          }),
+          if (friends.length > 5)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                '+ ${friends.length - 5} więcej',
+                style: const TextStyle(fontSize: 12),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildFriendPreviewRow(UserProfile friend) {
+    final String cityText = friend.city ?? 'Brak miasta';
+
+    return InkWell(
+      onTap: openFriendRequests,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            const CircleAvatar(
+              radius: 14,
+              child: Icon(
+                Icons.person,
+                size: 16,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    friend.username,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                  Text(
+                    cityText,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
