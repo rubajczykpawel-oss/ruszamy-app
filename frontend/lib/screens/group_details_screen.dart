@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/app_group.dart';
 import '../models/group_member.dart';
 import '../models/user_profile.dart';
+import '../services/auth_api_service.dart';
 import '../services/friends_api_service.dart';
 import '../services/groups_api_service.dart';
 import '../widgets/info_chip.dart';
@@ -25,6 +26,7 @@ class GroupDetailsScreen extends StatefulWidget {
 }
 
 class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
+  final AuthApiService authApiService = AuthApiService();
   final GroupsApiService groupsApiService = GroupsApiService();
   final FriendsApiService friendsApiService = FriendsApiService();
 
@@ -32,6 +34,7 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
   bool isAddingMember = false;
   bool isDeletingGroup = false;
   bool isRemovingMember = false;
+  bool isLeavingGroup = false;
 
   int? addingUserId;
   int? removingUserId;
@@ -39,6 +42,7 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
   String errorMessage = '';
   String successMessage = '';
 
+  UserProfile? currentUser;
   AppGroup? group;
   List<GroupMember> members = [];
   List<UserProfile> friends = [];
@@ -62,6 +66,11 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
     });
 
     try {
+      final UserProfile loadedCurrentUser =
+          await authApiService.getCurrentUser(
+        token: widget.token,
+      );
+
       final AppGroup loadedGroup = await groupsApiService.getGroupDetails(
         groupId: widget.groupId,
         token: widget.token,
@@ -79,6 +88,7 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
       );
 
       setState(() {
+        currentUser = loadedCurrentUser;
         group = loadedGroup;
         members = loadedMembers;
         friends = loadedFriends;
@@ -171,6 +181,69 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
       if (mounted) {
         setState(() {
           isDeletingGroup = false;
+        });
+      }
+    }
+  }
+
+  Future<void> confirmLeaveGroup(AppGroup groupToLeave) async {
+    final bool? shouldLeave = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Opuścić grupę?'),
+          content: Text(
+            'Czy na pewno chcesz opuścić grupę "${groupToLeave.name}"?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, false);
+              },
+              child: const Text('Anuluj'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+              child: const Text('Opuść'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldLeave == true) {
+      leaveGroup(groupToLeave);
+    }
+  }
+
+  Future<void> leaveGroup(AppGroup groupToLeave) async {
+    setState(() {
+      isLeavingGroup = true;
+      errorMessage = '';
+      successMessage = '';
+    });
+
+    try {
+      await groupsApiService.leaveGroup(
+        token: widget.token,
+        groupId: groupToLeave.id,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.pop(context, true);
+    } catch (error) {
+      setState(() {
+        errorMessage = error.toString().replaceFirst('Exception: ', '');
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLeavingGroup = false;
         });
       }
     }
@@ -283,6 +356,16 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
     });
   }
 
+  bool isCurrentUserOwner(AppGroup group) {
+    final UserProfile? user = currentUser;
+
+    if (user == null) {
+      return false;
+    }
+
+    return group.ownerId == user.id;
+  }
+
   @override
   Widget build(BuildContext context) {
     final AppGroup? currentGroup = group;
@@ -372,6 +455,8 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
           ),
           const SizedBox(height: 20),
           buildGroupActionsCard(group),
+          const SizedBox(height: 16),
+          buildLeaveGroupCard(group),
           const SizedBox(height: 24),
           buildAddFriendsCard(),
           const SizedBox(height: 24),
@@ -458,7 +543,7 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
               children: [
                 Expanded(
                   child: FilledButton.icon(
-                    onPressed: isDeletingGroup
+                    onPressed: isDeletingGroup || isLeavingGroup
                         ? null
                         : () {
                             openEditGroup(group);
@@ -470,7 +555,7 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: isDeletingGroup
+                    onPressed: isDeletingGroup || isLeavingGroup
                         ? null
                         : () {
                             confirmDeleteGroup(group);
@@ -482,6 +567,65 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                   ),
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildLeaveGroupCard(AppGroup group) {
+    final bool currentUserIsOwner = isCurrentUserOwner(group);
+
+    return Card(
+      color: Colors.red.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(
+                  Icons.logout,
+                  size: 32,
+                  color: Colors.red,
+                ),
+                SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    'Opuść grupę',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              currentUserIsOwner
+                  ? 'Jesteś właścicielem grupy. Właściciel powinien usunąć grupę albo przekazać ją komuś innemu w przyszłej funkcji.'
+                  : 'Jeśli nie chcesz już należeć do tej grupy, możesz ją opuścić.',
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 44,
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: currentUserIsOwner || isLeavingGroup
+                    ? null
+                    : () {
+                        confirmLeaveGroup(group);
+                      },
+                icon: const Icon(Icons.logout),
+                label: currentUserIsOwner
+                    ? const Text('Właściciel nie może opuścić')
+                    : isLeavingGroup
+                        ? const Text('Opuszczanie...')
+                        : const Text('Opuść grupę'),
+              ),
             ),
           ],
         ),
@@ -533,7 +677,8 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
     final bool isCurrentFriendLoading = addingUserId == friend.id;
 
     final String cityText = friend.city ?? 'Brak miasta';
-    final String ageText = friend.age == null ? 'Brak wieku' : '${friend.age} lat';
+    final String ageText =
+        friend.age == null ? 'Brak wieku' : '${friend.age} lat';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
