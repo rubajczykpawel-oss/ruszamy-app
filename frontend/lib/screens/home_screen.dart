@@ -39,6 +39,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String errorMessage = '';
 
+  String selectedCity = '';
+  String selectedActivityType = '';
+  String selectedLevel = '';
+
   UserProfile? profile;
   List<AppEvent> events = [];
 
@@ -106,6 +110,47 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     }
+  }
+
+  List<AppEvent> getFilteredEvents() {
+    return events.where((event) {
+      final bool matchesCity = selectedCity.isEmpty ||
+          event.city.toLowerCase() == selectedCity.toLowerCase();
+
+      final bool matchesActivityType = selectedActivityType.isEmpty ||
+          event.activityType.toLowerCase() ==
+              selectedActivityType.toLowerCase();
+
+      final bool matchesLevel = selectedLevel.isEmpty ||
+          event.level.toLowerCase() == selectedLevel.toLowerCase();
+
+      return matchesCity && matchesActivityType && matchesLevel;
+    }).toList();
+  }
+
+  List<String> getUniqueValues(List<String> values) {
+    final Set<String> uniqueValues = <String>{};
+
+    for (final String value in values) {
+      final String trimmedValue = value.trim();
+
+      if (trimmedValue.isNotEmpty) {
+        uniqueValues.add(trimmedValue);
+      }
+    }
+
+    final List<String> sortedValues = uniqueValues.toList();
+    sortedValues.sort();
+
+    return sortedValues;
+  }
+
+  void clearFilters() {
+    setState(() {
+      selectedCity = '';
+      selectedActivityType = '';
+      selectedLevel = '';
+    });
   }
 
   void logout() {
@@ -243,6 +288,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final bool isLoading = isLoadingProfile || isLoadingEvents;
+    final List<AppEvent> filteredEvents = getFilteredEvents();
 
     return Scaffold(
       appBar: AppBar(
@@ -271,263 +317,67 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   ProfileHeader(profile: profile),
                   const SizedBox(height: 12),
-                  Card(
+                  buildNavigationCard(
                     color: Colors.orange.shade50,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.person,
-                            size: 32,
-                            color: Colors.orange,
-                          ),
-                          const SizedBox(width: 16),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Mój profil',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                Text('Zobacz i edytuj swoje dane.'),
-                              ],
-                            ),
-                          ),
-                          FilledButton(
-                            onPressed: openProfile,
-                            child: const Text('Otwórz'),
-                          ),
-                        ],
-                      ),
-                    ),
+                    iconColor: Colors.orange,
+                    icon: Icons.person,
+                    title: 'Mój profil',
+                    subtitle: 'Zobacz i edytuj swoje dane.',
+                    onPressed: openProfile,
                   ),
                   const SizedBox(height: 12),
-                  Card(
+                  buildNavigationCard(
                     color: Colors.indigo.shade50,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.person_search,
-                            size: 32,
-                            color: Colors.indigo,
-                          ),
-                          const SizedBox(width: 16),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Znajdź znajomych',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                Text('Wyszukaj użytkownika i wyślij zaproszenie.'),
-                              ],
-                            ),
-                          ),
-                          FilledButton(
-                            onPressed: openFindFriends,
-                            child: const Text('Otwórz'),
-                          ),
-                        ],
-                      ),
-                    ),
+                    iconColor: Colors.indigo,
+                    icon: Icons.person_search,
+                    title: 'Znajdź znajomych',
+                    subtitle: 'Wyszukaj użytkownika i wyślij zaproszenie.',
+                    onPressed: openFindFriends,
                   ),
                   const SizedBox(height: 12),
-                  Card(
+                  buildNavigationCard(
                     color: Colors.cyan.shade50,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.people,
-                            size: 32,
-                            color: Colors.cyan,
-                          ),
-                          const SizedBox(width: 16),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Znajomi',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                Text('Sprawdź zaproszenia i listę znajomych.'),
-                              ],
-                            ),
-                          ),
-                          FilledButton(
-                            onPressed: openFriendRequests,
-                            child: const Text('Otwórz'),
-                          ),
-                        ],
-                      ),
-                    ),
+                    iconColor: Colors.cyan,
+                    icon: Icons.people,
+                    title: 'Znajomi',
+                    subtitle: 'Sprawdź zaproszenia i listę znajomych.',
+                    onPressed: openFriendRequests,
                   ),
                   const SizedBox(height: 12),
-                  Card(
+                  buildNavigationCard(
                     color: Colors.purple.shade50,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.add_circle,
-                            size: 32,
-                            color: Colors.purple,
-                          ),
-                          const SizedBox(width: 16),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Dodaj wydarzenie',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                Text('Utwórz nowy event bez używania Swaggera.'),
-                              ],
-                            ),
-                          ),
-                          FilledButton(
-                            onPressed: openCreateEvent,
-                            child: const Text('Otwórz'),
-                          ),
-                        ],
-                      ),
-                    ),
+                    iconColor: Colors.purple,
+                    icon: Icons.add_circle,
+                    title: 'Dodaj wydarzenie',
+                    subtitle: 'Utwórz nowy event bez używania Swaggera.',
+                    onPressed: openCreateEvent,
                   ),
                   const SizedBox(height: 12),
-                  Card(
+                  buildNavigationCard(
                     color: Colors.teal.shade50,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.group_add,
-                            size: 32,
-                            color: Colors.teal,
-                          ),
-                          const SizedBox(width: 16),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Dodaj grupę',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                Text('Utwórz nową grupę bez używania Swaggera.'),
-                              ],
-                            ),
-                          ),
-                          FilledButton(
-                            onPressed: openCreateGroup,
-                            child: const Text('Otwórz'),
-                          ),
-                        ],
-                      ),
-                    ),
+                    iconColor: Colors.teal,
+                    icon: Icons.group_add,
+                    title: 'Dodaj grupę',
+                    subtitle: 'Utwórz nową grupę bez używania Swaggera.',
+                    onPressed: openCreateGroup,
                   ),
                   const SizedBox(height: 12),
-                  Card(
+                  buildNavigationCard(
                     color: Colors.green.shade50,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.event_available,
-                            size: 32,
-                            color: Colors.green,
-                          ),
-                          const SizedBox(width: 16),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Moje wydarzenia',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                Text('Zobacz eventy, do których jesteś zapisany.'),
-                              ],
-                            ),
-                          ),
-                          FilledButton(
-                            onPressed: openMyEvents,
-                            child: const Text('Otwórz'),
-                          ),
-                        ],
-                      ),
-                    ),
+                    iconColor: Colors.green,
+                    icon: Icons.event_available,
+                    title: 'Moje wydarzenia',
+                    subtitle: 'Zobacz eventy, do których jesteś zapisany.',
+                    onPressed: openMyEvents,
                   ),
                   const SizedBox(height: 12),
-                  Card(
+                  buildNavigationCard(
                     color: Colors.blue.shade50,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.groups,
-                            size: 32,
-                            color: Colors.blue,
-                          ),
-                          const SizedBox(width: 16),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Moje grupy',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                Text('Zobacz grupy, do których należysz.'),
-                              ],
-                            ),
-                          ),
-                          FilledButton(
-                            onPressed: openMyGroups,
-                            child: const Text('Otwórz'),
-                          ),
-                        ],
-                      ),
-                    ),
+                    iconColor: Colors.blue,
+                    icon: Icons.groups,
+                    title: 'Moje grupy',
+                    subtitle: 'Zobacz grupy, do których należysz.',
+                    onPressed: openMyGroups,
                   ),
                   const SizedBox(height: 16),
                   const Text(
@@ -538,6 +388,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
+                  if (events.isNotEmpty)
+                    buildFiltersCard(
+                      filteredEventsCount: filteredEvents.length,
+                    ),
+                  if (events.isNotEmpty) const SizedBox(height: 12),
                   if (errorMessage.isNotEmpty)
                     Card(
                       color: Colors.red.shade50,
@@ -558,8 +413,18 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     )
+                  else if (filteredEvents.isEmpty)
+                    Card(
+                      color: Colors.amber.shade50,
+                      child: const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Text(
+                          'Brak wydarzeń pasujących do wybranych filtrów. Wyczyść filtry albo wybierz inne wartości.',
+                        ),
+                      ),
+                    )
                   else
-                    ...events.map((event) {
+                    ...filteredEvents.map((event) {
                       return EventCard(
                         event: event,
                         onTap: () {
@@ -570,6 +435,188 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
+    );
+  }
+
+  Widget buildNavigationCard({
+    required Color color,
+    required Color iconColor,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onPressed,
+  }) {
+    return Card(
+      color: color,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 32,
+              color: iconColor,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(subtitle),
+                ],
+              ),
+            ),
+            FilledButton(
+              onPressed: onPressed,
+              child: const Text('Otwórz'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildFiltersCard({
+    required int filteredEventsCount,
+  }) {
+    final List<String> cities = getUniqueValues(
+      events.map((event) {
+        return event.city;
+      }).toList(),
+    );
+
+    final List<String> activityTypes = getUniqueValues(
+      events.map((event) {
+        return event.activityType;
+      }).toList(),
+    );
+
+    final List<String> levels = getUniqueValues(
+      events.map((event) {
+        return event.level;
+      }).toList(),
+    );
+
+    return Card(
+      color: Colors.grey.shade100,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.filter_list),
+                SizedBox(width: 8),
+                Text(
+                  'Filtry wydarzeń',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Pokazuję $filteredEventsCount z ${events.length} wydarzeń.',
+            ),
+            const SizedBox(height: 16),
+            buildFilterDropdown(
+              label: 'Miasto',
+              icon: Icons.location_city,
+              currentValue: selectedCity,
+              allLabel: 'Wszystkie miasta',
+              options: cities,
+              onChanged: (String value) {
+                setState(() {
+                  selectedCity = value;
+                });
+              },
+            ),
+            const SizedBox(height: 12),
+            buildFilterDropdown(
+              label: 'Typ aktywności',
+              icon: Icons.directions_walk,
+              currentValue: selectedActivityType,
+              allLabel: 'Wszystkie aktywności',
+              options: activityTypes,
+              onChanged: (String value) {
+                setState(() {
+                  selectedActivityType = value;
+                });
+              },
+            ),
+            const SizedBox(height: 12),
+            buildFilterDropdown(
+              label: 'Poziom',
+              icon: Icons.signal_cellular_alt,
+              currentValue: selectedLevel,
+              allLabel: 'Wszystkie poziomy',
+              options: levels,
+              onChanged: (String value) {
+                setState(() {
+                  selectedLevel = value;
+                });
+              },
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 44,
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: clearFilters,
+                icon: const Icon(Icons.clear),
+                label: const Text('Wyczyść filtry'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildFilterDropdown({
+    required String label,
+    required IconData icon,
+    required String currentValue,
+    required String allLabel,
+    required List<String> options,
+    required ValueChanged<String> onChanged,
+  }) {
+    final String safeValue = options.contains(currentValue) ? currentValue : '';
+
+    return DropdownButtonFormField<String>(
+      value: safeValue,
+      isExpanded: true,
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
+        prefixIcon: Icon(icon),
+      ),
+      items: [
+        DropdownMenuItem<String>(
+          value: '',
+          child: Text(allLabel),
+        ),
+        ...options.map((option) {
+          return DropdownMenuItem<String>(
+            value: option,
+            child: Text(option),
+          );
+        }),
+      ],
+      onChanged: (String? value) {
+        onChanged(value ?? '');
+      },
     );
   }
 }
