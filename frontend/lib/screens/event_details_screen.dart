@@ -26,6 +26,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
 
   bool isLoading = true;
   bool isActionLoading = false;
+  bool isDeletingEvent = false;
 
   String errorMessage = '';
   String successMessage = '';
@@ -82,6 +83,70 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
 
     loadEventDetails();
+  }
+
+  Future<void> confirmDeleteEvent(AppEvent eventToDelete) async {
+    final bool? shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Usunąć wydarzenie?'),
+          content: Text(
+            'Czy na pewno chcesz usunąć wydarzenie "${eventToDelete.title}"? '
+            'Tej operacji nie da się cofnąć.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, false);
+              },
+              child: const Text('Anuluj'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+              child: const Text('Usuń'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldDelete == true) {
+      deleteEvent(eventToDelete);
+    }
+  }
+
+  Future<void> deleteEvent(AppEvent eventToDelete) async {
+    setState(() {
+      isDeletingEvent = true;
+      errorMessage = '';
+      successMessage = '';
+    });
+
+    try {
+      await eventsApiService.deleteEvent(
+        eventId: eventToDelete.id,
+        token: widget.token,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.pop(context, true);
+    } catch (error) {
+      setState(() {
+        errorMessage = error.toString().replaceFirst('Exception: ', '');
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          isDeletingEvent = false;
+        });
+      }
+    }
   }
 
   Future<void> joinEvent() async {
@@ -277,7 +342,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         SizedBox(
           height: 48,
           child: FilledButton.icon(
-            onPressed: isActionLoading ? null : joinEvent,
+            onPressed: isActionLoading || isDeletingEvent ? null : joinEvent,
             icon: const Icon(Icons.group_add),
             label: const Text('Dołącz do wydarzenia'),
           ),
@@ -286,7 +351,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         SizedBox(
           height: 48,
           child: OutlinedButton.icon(
-            onPressed: isActionLoading ? null : leaveEvent,
+            onPressed: isActionLoading || isDeletingEvent ? null : leaveEvent,
             icon: const Icon(Icons.logout),
             label: const Text('Opuść wydarzenie'),
           ),
@@ -300,37 +365,61 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
       color: Colors.orange.shade50,
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(
-              Icons.edit,
-              size: 32,
-              color: Colors.orange,
-            ),
-            const SizedBox(width: 16),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Edycja wydarzenia',
+            const Row(
+              children: [
+                Icon(
+                  Icons.settings,
+                  size: 32,
+                  color: Colors.orange,
+                ),
+                SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    'Zarządzanie wydarzeniem',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Zmień tytuł, opis, miasto, datę albo limit uczestników.',
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-            FilledButton(
-              onPressed: () {
-                openEditEvent(event);
-              },
-              child: const Text('Edytuj'),
+            const SizedBox(height: 8),
+            const Text(
+              'Edytuj dane wydarzenia albo usuń wydarzenie, jeśli jesteś jego twórcą.',
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: isDeletingEvent
+                        ? null
+                        : () {
+                            openEditEvent(event);
+                          },
+                    icon: const Icon(Icons.edit),
+                    label: const Text('Edytuj'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: isDeletingEvent
+                        ? null
+                        : () {
+                            confirmDeleteEvent(event);
+                          },
+                    icon: const Icon(Icons.delete),
+                    label: isDeletingEvent
+                        ? const Text('Usuwanie...')
+                        : const Text('Usuń'),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

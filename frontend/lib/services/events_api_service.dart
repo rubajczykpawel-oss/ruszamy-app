@@ -206,6 +206,28 @@ class EventsApiService {
     return AppEvent.fromJson(data);
   }
 
+  Future<void> deleteEvent({
+    required int eventId,
+    required String token,
+  }) async {
+    final Uri url = Uri.parse('${ApiConfig.baseUrl}/events/$eventId');
+
+    final http.Response response = await http.delete(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      final Map<String, dynamic> data = jsonDecode(response.body);
+
+      throw Exception(
+        data['detail'] ?? 'Nie udało się usunąć wydarzenia',
+      );
+    }
+  }
+
   Future<void> joinEvent({
     required int eventId,
     required String token,
