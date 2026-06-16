@@ -9,6 +9,7 @@ import '../widgets/profile_header.dart';
 import 'create_event_screen.dart';
 import 'create_group_screen.dart';
 import 'event_details_screen.dart';
+import 'find_friends_screen.dart';
 import 'login_screen.dart';
 import 'my_events_screen.dart';
 import 'my_groups_screen.dart';
@@ -132,6 +133,21 @@ class _HomeScreenState extends State<HomeScreen> {
     loadProfile();
   }
 
+  Future<void> openFindFriends() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) {
+          return FindFriendsScreen(
+            token: widget.token,
+          );
+        },
+      ),
+    );
+
+    loadData();
+  }
+
   Future<void> openCreateEvent() async {
     await Navigator.push(
       context,
@@ -159,7 +175,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
 
-    loadEvents();
+    loadData();
   }
 
   Future<void> openEventDetails(AppEvent event) async {
@@ -205,7 +221,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
 
-    loadEvents();
+    loadData();
   }
 
   @override
@@ -238,7 +254,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.all(16),
                 children: [
                   ProfileHeader(profile: profile),
+
                   const SizedBox(height: 12),
+
                   Card(
                     color: Colors.orange.shade50,
                     child: Padding(
@@ -275,7 +293,50 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
+
                   const SizedBox(height: 12),
+
+                  Card(
+                    color: Colors.indigo.shade50,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.person_search,
+                            size: 32,
+                            color: Colors.indigo,
+                          ),
+                          const SizedBox(width: 16),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Znajdź znajomych',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Wyszukaj użytkownika i wyślij zaproszenie.',
+                                ),
+                              ],
+                            ),
+                          ),
+                          FilledButton(
+                            onPressed: openFindFriends,
+                            child: const Text('Otwórz'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
                   Card(
                     color: Colors.purple.shade50,
                     child: Padding(
@@ -312,7 +373,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
+
                   const SizedBox(height: 12),
+
                   Card(
                     color: Colors.teal.shade50,
                     child: Padding(
@@ -349,7 +412,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
+
                   const SizedBox(height: 12),
+
                   Card(
                     color: Colors.green.shade50,
                     child: Padding(
@@ -386,7 +451,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
+
                   const SizedBox(height: 12),
+
                   Card(
                     color: Colors.blue.shade50,
                     child: Padding(
@@ -423,7 +490,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
+
                   const SizedBox(height: 16),
+
                   const Text(
                     'Publiczne wydarzenia',
                     style: TextStyle(
@@ -431,7 +500,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+
                   const SizedBox(height: 12),
+
                   if (errorMessage.isNotEmpty)
                     Card(
                       color: Colors.red.shade50,
@@ -443,6 +514,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
+
                   if (events.isEmpty)
                     const Card(
                       child: Padding(

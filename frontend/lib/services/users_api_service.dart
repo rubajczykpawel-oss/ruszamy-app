@@ -6,6 +6,36 @@ import '../config/api_config.dart';
 import '../models/user_profile.dart';
 
 class UsersApiService {
+  Future<List<UserProfile>> searchUsers({
+    required String token,
+    required String username,
+  }) async {
+    final Uri url = Uri.parse(
+      '${ApiConfig.baseUrl}/users/search?username=${Uri.encodeComponent(username.trim())}',
+    );
+
+    final http.Response response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      final Map<String, dynamic> data = jsonDecode(response.body);
+
+      throw Exception(
+        data['detail'] ?? 'Nie udało się wyszukać użytkowników',
+      );
+    }
+
+    final List<dynamic> data = jsonDecode(response.body);
+
+    return data.map((item) {
+      return UserProfile.fromJson(item);
+    }).toList();
+  }
+
   Future<UserProfile> updateMyProfile({
     required String token,
     required String username,
