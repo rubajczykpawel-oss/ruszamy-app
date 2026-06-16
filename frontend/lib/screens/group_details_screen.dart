@@ -1,0 +1,248 @@
+import 'package:flutter/material.dart';
+
+import '../models/app_group.dart';
+import '../models/group_member.dart';
+import '../services/groups_api_service.dart';
+import '../widgets/info_chip.dart';
+
+class GroupDetailsScreen extends StatefulWidget {
+  final int groupId;
+  final String token;
+
+  const GroupDetailsScreen({
+    super.key,
+    required this.groupId,
+    required this.token,
+  });
+
+  @override
+  State<GroupDetailsScreen> createState() {
+    return _GroupDetailsScreenState();
+  }
+}
+
+class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
+  final GroupsApiService groupsApiService = GroupsApiService();
+
+  bool isLoading = true;
+  String errorMessage = '';
+
+  AppGroup? group;
+  List<GroupMember> members = [];
+
+  @override
+  void initState() {
+    super.initState();
+
+    loadGroupData();
+  }
+
+  Future<void> loadGroupData() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = '';
+    });
+
+    try {
+      final AppGroup loadedGroup = await groupsApiService.getGroupDetails(
+        groupId: widget.groupId,
+        token: widget.token,
+      );
+
+      final List<GroupMember> loadedMembers =
+          await groupsApiService.getGroupMembers(
+        groupId: widget.groupId,
+        token: widget.token,
+      );
+
+      setState(() {
+        group = loadedGroup;
+        members = loadedMembers;
+      });
+    } catch (error) {
+      setState(() {
+        errorMessage = error.toString().replaceFirst('Exception: ', '');
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AppGroup? currentGroup = group;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Szczegóły grupy'),
+        actions: [
+          IconButton(
+            onPressed: isLoading ? null : loadGroupData,
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Odśwież',
+          ),
+        ],
+      ),
+      body: isLoading
+          ? const Center(
+              child: CircularProgressIndicator(),
+            )
+          : currentGroup == null
+              ? buildErrorView()
+              : buildGroupDetails(currentGroup),
+    );
+  }
+
+  Widget buildErrorView() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Text(
+          errorMessage.isEmpty
+              ? 'Nie udało się pobrać szczegółów grupy.'
+              : errorMessage,
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: Colors.red),
+        ),
+      ),
+    );
+  }
+
+  Widget buildGroupDetails(AppGroup group) {
+    return RefreshIndicator(
+      onRefresh: loadGroupData,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Text(
+            group.name,
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            group.description,
+            style: const TextStyle(fontSize: 16),
+          ),
+          const SizedBox(height: 20),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              InfoChip(
+                icon: Icons.location_city,
+                label: group.city,
+              ),
+              InfoChip(
+                icon: Icons.directions_walk,
+                label: group.activityType,
+              ),
+              InfoChip(
+                icon: Icons.person,
+                label: 'Owner ID: ${group.ownerId}',
+              ),
+              InfoChip(
+                icon: Icons.calendar_month,
+                label: group.createdAt,
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Członkowie grupy',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (errorMessage.isNotEmpty)
+            Card(
+              color: Colors.red.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  errorMessage,
+                  style: const TextStyle(color: Colors.red),
+                ),
+              ),
+            ),
+          if (members.isEmpty)
+            const Card(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Text('Ta grupa nie ma jeszcze członków.'),
+              ),
+            )
+          else
+            ...members.map((member) {
+              return buildMemberCard(member);
+            }),
+        ],
+      ),
+    );
+  }
+
+  Widget buildMemberCard(GroupMember member) {
+    final String cityText = member.user.city ?? 'Brak miasta';
+    final String ageText = member.user.age == null
+        ? 'Brak wieku'
+        : '${member.user.age} lat';
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            const CircleAvatar(
+              radius: 28,
+              child: Icon(Icons.person),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    member.user.username,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(member.user.email),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      InfoChip(
+                        icon: Icons.badge,
+                        label: member.role,
+                      ),
+                      InfoChip(
+                        icon: Icons.location_city,
+                        label: cityText,
+                      ),
+                      InfoChip(
+                        icon: Icons.cake,
+                        label: ageText,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

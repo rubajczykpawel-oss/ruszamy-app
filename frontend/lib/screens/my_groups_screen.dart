@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/app_group.dart';
 import '../services/groups_api_service.dart';
 import '../widgets/group_card.dart';
+import 'group_details_screen.dart';
 
 class MyGroupsScreen extends StatefulWidget {
   final String token;
@@ -60,6 +61,22 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
     }
   }
 
+  Future<void> openGroupDetails(AppGroup group) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) {
+          return GroupDetailsScreen(
+            groupId: group.id,
+            token: widget.token,
+          );
+        },
+      ),
+    );
+
+    loadMyGroups();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -112,7 +129,12 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
                     )
                   else
                     ...groups.map((group) {
-                      return GroupCard(group: group);
+                      return GroupCard(
+                        group: group,
+                        onTap: () {
+                          openGroupDetails(group);
+                        },
+                      );
                     }),
                 ],
               ),
