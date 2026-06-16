@@ -125,4 +125,29 @@ class GroupsApiService {
 
     return AppGroup.fromJson(data);
   }
+
+  Future<void> addMemberToGroup({
+    required String token,
+    required int groupId,
+    required int userId,
+  }) async {
+    final Uri url = Uri.parse(
+      '${ApiConfig.baseUrl}/groups/$groupId/members/$userId',
+    );
+
+    final http.Response response = await http.post(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      final Map<String, dynamic> data = jsonDecode(response.body);
+
+      throw Exception(
+        data['detail'] ?? 'Nie udało się dodać użytkownika do grupy',
+      );
+    }
+  }
 }

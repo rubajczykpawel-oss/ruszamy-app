@@ -24,8 +24,13 @@ class GroupDetailsScreen extends StatefulWidget {
 class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
   final GroupsApiService groupsApiService = GroupsApiService();
 
+  final TextEditingController memberUserIdController = TextEditingController();
+
   bool isLoading = true;
+  bool isAddingMember = false;
+
   String errorMessage = '';
+  String successMessage = '';
 
   AppGroup? group;
   List<GroupMember> members = [];
@@ -41,6 +46,7 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
     setState(() {
       isLoading = true;
       errorMessage = '';
+      successMessage = '';
     });
 
     try {
@@ -70,6 +76,58 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
         });
       }
     }
+  }
+
+  Future<void> addMemberToGroup() async {
+    final int? userId = int.tryParse(memberUserIdController.text.trim());
+
+    if (userId == null) {
+      setState(() {
+        errorMessage = 'ID użytkownika musi być liczbą.';
+        successMessage = '';
+      });
+
+      return;
+    }
+
+    setState(() {
+      isAddingMember = true;
+      errorMessage = '';
+      successMessage = '';
+    });
+
+    try {
+      await groupsApiService.addMemberToGroup(
+        token: widget.token,
+        groupId: widget.groupId,
+        userId: userId,
+      );
+
+      memberUserIdController.clear();
+
+      setState(() {
+        successMessage = 'Użytkownik został dodany do grupy.';
+      });
+
+      await loadGroupData();
+    } catch (error) {
+      setState(() {
+        errorMessage = error.toString().replaceFirst('Exception: ', '');
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          isAddingMember = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    memberUserIdController.dispose();
+
+    super.dispose();
   }
 
   @override
@@ -154,6 +212,8 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
             ],
           ),
           const SizedBox(height: 24),
+          buildAddMemberCard(),
+          const SizedBox(height: 24),
           const Text(
             'Członkowie grupy',
             style: TextStyle(
@@ -173,6 +233,17 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                 ),
               ),
             ),
+          if (successMessage.isNotEmpty)
+            Card(
+              color: Colors.green.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  successMessage,
+                  style: const TextStyle(color: Colors.green),
+                ),
+              ),
+            ),
           if (members.isEmpty)
             const Card(
               child: Padding(
@@ -185,6 +256,58 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
               return buildMemberCard(member);
             }),
         ],
+      ),
+    );
+  }
+
+  Widget buildAddMemberCard() {
+    return Card(
+      color: Colors.teal.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Dodaj członka do grupy',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Wpisz ID użytkownika, którego chcesz dodać. Backend sprawdzi, czy możesz dodać tę osobę.',
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: memberUserIdController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'ID użytkownika',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.person_add),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 48,
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: isAddingMember ? null : addMemberToGroup,
+                icon: const Icon(Icons.group_add),
+                label: isAddingMember
+                    ? const Text('Dodawanie...')
+                    : const Text('Dodaj członka'),
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Podpowiedź: ID użytkownika zobaczysz np. na ekranie Znajdź znajomych albo Znajomi.',
+              style: TextStyle(fontSize: 12),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -234,6 +357,10 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                       InfoChip(
                         icon: Icons.cake,
                         label: ageText,
+                      ),
+                      InfoChip(
+                        icon: Icons.person,
+                        label: 'ID: ${member.userId}',
                       ),
                     ],
                   ),
