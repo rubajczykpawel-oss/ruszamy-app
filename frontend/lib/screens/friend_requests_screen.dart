@@ -143,148 +143,236 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Znajomi'),
-        actions: [
-          IconButton(
-            onPressed: isLoading ? null : loadData,
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Odśwież',
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Znajomi'),
+          actions: [
+            IconButton(
+              onPressed: isLoading ? null : loadData,
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Odśwież',
+            ),
+          ],
+          bottom: TabBar(
+            isScrollable: true,
+            tabs: [
+              Tab(
+                icon: const Icon(Icons.people),
+                text: 'Moi znajomi (${friends.length})',
+              ),
+              Tab(
+                icon: const Icon(Icons.inbox),
+                text: 'Odebrane (${receivedRequests.length})',
+              ),
+              Tab(
+                icon: const Icon(Icons.outbox),
+                text: 'Wysłane (${sentRequests.length})',
+              ),
+            ],
           ),
-        ],
-      ),
-      body: isLoading
-          ? const Center(
-              child: CircularProgressIndicator(),
-            )
-          : RefreshIndicator(
-              onRefresh: loadData,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
+        ),
+        body: isLoading
+            ? const Center(
+                child: CircularProgressIndicator(),
+              )
+            : Column(
                 children: [
-                  const Text(
-                    'Znajomi i zaproszenia',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
+                  buildTopInfo(),
+                  buildMessages(),
+                  Expanded(
+                    child: TabBarView(
+                      children: [
+                        buildFriendsTab(),
+                        buildReceivedRequestsTab(),
+                        buildSentRequestsTab(),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Tutaj widzisz odebrane zaproszenia, wysłane zaproszenia oraz listę znajomych.',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 16),
-
-                  if (errorMessage.isNotEmpty)
-                    Card(
-                      color: Colors.red.shade50,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Text(
-                          errorMessage,
-                          style: const TextStyle(color: Colors.red),
-                        ),
-                      ),
-                    ),
-
-                  if (successMessage.isNotEmpty)
-                    Card(
-                      color: Colors.green.shade50,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Text(
-                          successMessage,
-                          style: const TextStyle(color: Colors.green),
-                        ),
-                      ),
-                    ),
-
-                  const SizedBox(height: 16),
-
-                  buildSectionTitle(
-                    title: 'Odebrane zaproszenia',
-                    icon: Icons.inbox,
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  if (receivedRequests.isEmpty)
-                    const Card(
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Text('Nie masz odebranych zaproszeń.'),
-                      ),
-                    )
-                  else
-                    ...receivedRequests.map((friendship) {
-                      return buildReceivedRequestCard(friendship);
-                    }),
-
-                  const SizedBox(height: 24),
-
-                  buildSectionTitle(
-                    title: 'Wysłane zaproszenia',
-                    icon: Icons.outbox,
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  if (sentRequests.isEmpty)
-                    const Card(
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Text('Nie masz wysłanych zaproszeń.'),
-                      ),
-                    )
-                  else
-                    ...sentRequests.map((friendship) {
-                      return buildSentRequestCard(friendship);
-                    }),
-
-                  const SizedBox(height: 24),
-
-                  buildSectionTitle(
-                    title: 'Moi znajomi',
-                    icon: Icons.people,
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  if (friends.isEmpty)
-                    const Card(
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Text('Nie masz jeszcze znajomych.'),
-                      ),
-                    )
-                  else
-                    ...friends.map((friend) {
-                      return buildFriendCard(friend);
-                    }),
                 ],
               ),
-            ),
+      ),
     );
   }
 
-  Widget buildSectionTitle({
+  Widget buildTopInfo() {
+    return Card(
+      margin: const EdgeInsets.all(16),
+      color: Colors.blue.shade50,
+      child: const Padding(
+        padding: EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(
+              Icons.info_outline,
+              color: Colors.blue,
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Tutaj masz znajomych oraz zaproszenia podzielone na zakładki.',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildMessages() {
+    if (errorMessage.isEmpty && successMessage.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Column(
+        children: [
+          if (errorMessage.isNotEmpty)
+            Card(
+              color: Colors.red.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  errorMessage,
+                  style: const TextStyle(color: Colors.red),
+                ),
+              ),
+            ),
+          if (successMessage.isNotEmpty)
+            Card(
+              color: Colors.green.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  successMessage,
+                  style: const TextStyle(color: Colors.green),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildFriendsTab() {
+    return RefreshIndicator(
+      onRefresh: loadData,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        children: [
+          buildSectionHeader(
+            title: 'Moi znajomi',
+            subtitle: 'Lista zaakceptowanych znajomych.',
+            icon: Icons.people,
+          ),
+          const SizedBox(height: 12),
+          if (friends.isEmpty)
+            buildEmptyCard(
+              text:
+                  'Nie masz jeszcze znajomych. Wejdź w kafelek Znajdź znajomych i wyślij zaproszenie.',
+            )
+          else
+            ...friends.map((friend) {
+              return buildFriendCard(friend);
+            }),
+        ],
+      ),
+    );
+  }
+
+  Widget buildReceivedRequestsTab() {
+    return RefreshIndicator(
+      onRefresh: loadData,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        children: [
+          buildSectionHeader(
+            title: 'Odebrane zaproszenia',
+            subtitle: 'Tutaj akceptujesz albo odrzucasz zaproszenia.',
+            icon: Icons.inbox,
+          ),
+          const SizedBox(height: 12),
+          if (receivedRequests.isEmpty)
+            buildEmptyCard(
+              text: 'Nie masz odebranych zaproszeń.',
+            )
+          else
+            ...receivedRequests.map((friendship) {
+              return buildReceivedRequestCard(friendship);
+            }),
+        ],
+      ),
+    );
+  }
+
+  Widget buildSentRequestsTab() {
+    return RefreshIndicator(
+      onRefresh: loadData,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        children: [
+          buildSectionHeader(
+            title: 'Wysłane zaproszenia',
+            subtitle: 'Tutaj widzisz zaproszenia, które wysłałeś.',
+            icon: Icons.outbox,
+          ),
+          const SizedBox(height: 12),
+          if (sentRequests.isEmpty)
+            buildEmptyCard(
+              text: 'Nie masz wysłanych zaproszeń.',
+            )
+          else
+            ...sentRequests.map((friendship) {
+              return buildSentRequestCard(friendship);
+            }),
+        ],
+      ),
+    );
+  }
+
+  Widget buildSectionHeader({
     required String title,
+    required String subtitle,
     required IconData icon,
   }) {
     return Row(
       children: [
-        Icon(icon),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
+        CircleAvatar(
+          child: Icon(icon),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(subtitle),
+            ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget buildEmptyCard({
+    required String text,
+  }) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(text),
+      ),
     );
   }
 
@@ -306,17 +394,33 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              requesterText,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              children: [
+                const CircleAvatar(
+                  radius: 28,
+                  child: Icon(Icons.person),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        requesterText,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(requesterDetails),
+                      const SizedBox(height: 4),
+                      Text('Status: ${friendship.status}'),
+                      Text('ID zaproszenia: ${friendship.id}'),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            Text(requesterDetails),
-            const SizedBox(height: 8),
-            Text('Status: ${friendship.status}'),
-            Text('ID zaproszenia: ${friendship.id}'),
             const SizedBox(height: 12),
             Row(
               children: [
