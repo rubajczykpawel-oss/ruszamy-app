@@ -63,7 +63,76 @@ class EventsApiService {
     );
 
     if (response.statusCode != 200) {
-      throw Exception('Nie udało się pobrać szczegółów wydarzenia');
+      final Map<String, dynamic> data = jsonDecode(response.body);
+
+      throw Exception(
+        data['detail'] ?? 'Nie udało się pobrać szczegółów wydarzenia',
+      );
+    }
+
+    final Map<String, dynamic> data = jsonDecode(response.body);
+
+    return AppEvent.fromJson(data);
+  }
+
+  Future<AppEvent> createEvent({
+    required String token,
+    required String title,
+    required String description,
+    required String activityType,
+    required String city,
+    required String locationName,
+    required String date,
+    required String time,
+    required String maxParticipants,
+    required String level,
+    required String ageMin,
+    required String ageMax,
+    required bool isPublic,
+    required String groupId,
+  }) async {
+    final Uri url = Uri.parse('${ApiConfig.baseUrl}/events');
+
+    final int? parsedMaxParticipants = int.tryParse(maxParticipants.trim());
+    final int? parsedAgeMin = int.tryParse(ageMin.trim());
+    final int? parsedAgeMax = int.tryParse(ageMax.trim());
+    final int? parsedGroupId = int.tryParse(groupId.trim());
+
+    if (parsedMaxParticipants == null) {
+      throw Exception('Limit uczestników musi być liczbą');
+    }
+
+    final Map<String, dynamic> body = {
+      'title': title.trim(),
+      'description': description.trim(),
+      'activity_type': activityType.trim(),
+      'city': city.trim(),
+      'location_name': locationName.trim(),
+      'date': date.trim(),
+      'time': time.trim(),
+      'max_participants': parsedMaxParticipants,
+      'level': level.trim(),
+      'age_min': parsedAgeMin,
+      'age_max': parsedAgeMax,
+      'is_public': isPublic,
+      'group_id': parsedGroupId,
+    };
+
+    final http.Response response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      final Map<String, dynamic> data = jsonDecode(response.body);
+
+      throw Exception(
+        data['detail'] ?? 'Nie udało się utworzyć wydarzenia',
+      );
     }
 
     final Map<String, dynamic> data = jsonDecode(response.body);

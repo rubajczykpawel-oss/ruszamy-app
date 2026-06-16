@@ -6,6 +6,7 @@ import '../services/auth_api_service.dart';
 import '../services/events_api_service.dart';
 import '../widgets/event_card.dart';
 import '../widgets/profile_header.dart';
+import 'create_event_screen.dart';
 import 'event_details_screen.dart';
 import 'login_screen.dart';
 import 'my_events_screen.dart';
@@ -131,6 +132,21 @@ class _HomeScreenState extends State<HomeScreen> {
     loadProfile();
   }
 
+  Future<void> openCreateEvent() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) {
+          return CreateEventScreen(
+            token: widget.token,
+          );
+        },
+      ),
+    );
+
+    loadEvents();
+  }
+
   Future<void> openEventDetails(AppEvent event) async {
     await Navigator.push(
       context,
@@ -248,6 +264,45 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 12),
                   Card(
+                    color: Colors.purple.shade50,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.add_circle,
+                            size: 32,
+                            color: Colors.purple,
+                          ),
+                          const SizedBox(width: 16),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Dodaj wydarzenie',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Utwórz nowy event bez używania Swaggera.',
+                                ),
+                              ],
+                            ),
+                          ),
+                          FilledButton(
+                            onPressed: openCreateEvent,
+                            child: const Text('Otwórz'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Card(
                     color: Colors.green.shade50,
                     child: Padding(
                       padding: const EdgeInsets.all(16),
@@ -349,7 +404,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Padding(
                         padding: EdgeInsets.all(16),
                         child: Text(
-                          'Brak publicznych wydarzeń. Utwórz event w Swaggerze przez POST /events.',
+                          'Brak publicznych wydarzeń. Utwórz event przez kafelek Dodaj wydarzenie.',
                         ),
                       ),
                     )
