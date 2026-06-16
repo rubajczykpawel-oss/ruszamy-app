@@ -31,8 +31,10 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
   bool isLoading = true;
   bool isAddingMember = false;
   bool isDeletingGroup = false;
+  bool isRemovingMember = false;
 
   int? addingUserId;
+  int? removingUserId;
 
   String errorMessage = '';
   String successMessage = '';
@@ -203,6 +205,73 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
         setState(() {
           isAddingMember = false;
           addingUserId = null;
+        });
+      }
+    }
+  }
+
+  Future<void> confirmRemoveMember(GroupMember member) async {
+    final bool? shouldRemove = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Usunąć członka z grupy?'),
+          content: Text(
+            'Czy na pewno chcesz usunąć użytkownika "${member.user.username}" z tej grupy?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, false);
+              },
+              child: const Text('Anuluj'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+              child: const Text('Usuń'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldRemove == true) {
+      removeMemberFromGroup(member);
+    }
+  }
+
+  Future<void> removeMemberFromGroup(GroupMember member) async {
+    setState(() {
+      isRemovingMember = true;
+      removingUserId = member.userId;
+      errorMessage = '';
+      successMessage = '';
+    });
+
+    try {
+      await groupsApiService.removeMemberFromGroup(
+        token: widget.token,
+        groupId: widget.groupId,
+        userId: member.userId,
+      );
+
+      setState(() {
+        successMessage =
+            'Usunięto użytkownika ${member.user.username} z grupy.';
+      });
+
+      await loadGroupData(clearMessages: false);
+    } catch (error) {
+      setState(() {
+        errorMessage = error.toString().replaceFirst('Exception: ', '');
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          isRemovingMember = false;
+          removingUserId = null;
         });
       }
     }
@@ -521,53 +590,78 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
         ? 'Brak wieku'
         : '${member.user.age} lat';
 
+    final bool isOwner = member.role == 'owner';
+    final bool isCurrentMemberRemoving = removingUserId == member.userId;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
+        child: Column(
           children: [
-            const CircleAvatar(
-              radius: 28,
-              child: Icon(Icons.person),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    member.user.username,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(member.user.email),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
+            Row(
+              children: [
+                const CircleAvatar(
+                  radius: 28,
+                  child: Icon(Icons.person),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      InfoChip(
-                        icon: Icons.badge,
-                        label: member.role,
+                      Text(
+                        member.user.username,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      InfoChip(
-                        icon: Icons.location_city,
-                        label: cityText,
-                      ),
-                      InfoChip(
-                        icon: Icons.cake,
-                        label: ageText,
-                      ),
-                      InfoChip(
-                        icon: Icons.person,
-                        label: 'ID: ${member.userId}',
+                      Text(member.user.email),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          InfoChip(
+                            icon: Icons.badge,
+                            label: member.role,
+                          ),
+                          InfoChip(
+                            icon: Icons.location_city,
+                            label: cityText,
+                          ),
+                          InfoChip(
+                            icon: Icons.cake,
+                            label: ageText,
+                          ),
+                          InfoChip(
+                            icon: Icons.person,
+                            label: 'ID: ${member.userId}',
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 44,
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: isOwner || isRemovingMember
+                    ? null
+                    : () {
+                        confirmRemoveMember(member);
+                      },
+                icon: const Icon(Icons.person_remove),
+                label: isOwner
+                    ? const Text('Właściciel grupy')
+                    : isCurrentMemberRemoving
+                        ? const Text('Usuwanie...')
+                        : const Text('Usuń z grupy'),
               ),
             ),
           ],

@@ -211,4 +211,33 @@ class GroupsApiService {
       );
     }
   }
+
+  Future<void> removeMemberFromGroup({
+    required String token,
+    required int groupId,
+    required int userId,
+  }) async {
+    final Uri url = Uri.parse(
+      '${ApiConfig.baseUrl}/groups/$groupId/members/$userId',
+    );
+
+    final http.Response response = await http.delete(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      if (response.body.isEmpty) {
+        throw Exception('Nie udało się usunąć członka z grupy');
+      }
+
+      final Map<String, dynamic> data = jsonDecode(response.body);
+
+      throw Exception(
+        data['detail'] ?? 'Nie udało się usunąć członka z grupy',
+      );
+    }
+  }
 }
