@@ -10,6 +10,7 @@ import 'event_details_screen.dart';
 import 'login_screen.dart';
 import 'my_events_screen.dart';
 import 'my_groups_screen.dart';
+import 'profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String token;
@@ -115,6 +116,21 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<void> openProfile() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) {
+          return ProfileScreen(
+            token: widget.token,
+          );
+        },
+      ),
+    );
+
+    loadProfile();
+  }
+
   Future<void> openEventDetails(AppEvent event) async {
     await Navigator.push(
       context,
@@ -191,6 +207,45 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.all(16),
                 children: [
                   ProfileHeader(profile: profile),
+                  const SizedBox(height: 12),
+                  Card(
+                    color: Colors.orange.shade50,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.person,
+                            size: 32,
+                            color: Colors.orange,
+                          ),
+                          const SizedBox(width: 16),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Mój profil',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Zobacz i edytuj swoje dane.',
+                                ),
+                              ],
+                            ),
+                          ),
+                          FilledButton(
+                            onPressed: openProfile,
+                            child: const Text('Otwórz'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   Card(
                     color: Colors.green.shade50,
