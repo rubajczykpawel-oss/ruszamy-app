@@ -34,8 +34,14 @@ class _HomeScreenState extends State<HomeScreen> {
   final AuthApiService authApiService = AuthApiService();
   final EventsApiService eventsApiService = EventsApiService();
 
+  final GlobalKey publicEventsKey = GlobalKey();
+
   bool isLoadingProfile = true;
   bool isLoadingEvents = true;
+
+  bool isFriendsExpanded = true;
+  bool isEventsExpanded = true;
+  bool isGroupsExpanded = true;
 
   String errorMessage = '';
 
@@ -49,6 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+
     loadData();
   }
 
@@ -151,6 +158,20 @@ class _HomeScreenState extends State<HomeScreen> {
       selectedActivityType = '';
       selectedLevel = '';
     });
+  }
+
+  void scrollToPublicEvents() {
+    final BuildContext? publicEventsContext = publicEventsKey.currentContext;
+
+    if (publicEventsContext == null) {
+      return;
+    }
+
+    Scrollable.ensureVisible(
+      publicEventsContext,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
+    );
   }
 
   void logout() {
@@ -288,7 +309,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final bool isLoading = isLoadingProfile || isLoadingEvents;
-    final List<AppEvent> filteredEvents = getFilteredEvents();
 
     return Scaffold(
       appBar: AppBar(
@@ -310,131 +330,364 @@ class _HomeScreenState extends State<HomeScreen> {
           ? const Center(
               child: CircularProgressIndicator(),
             )
-          : RefreshIndicator(
-              onRefresh: loadData,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  ProfileHeader(profile: profile),
-                  const SizedBox(height: 12),
-                  buildNavigationCard(
-                    color: Colors.orange.shade50,
-                    iconColor: Colors.orange,
-                    icon: Icons.person,
-                    title: 'Mój profil',
-                    subtitle: 'Zobacz i edytuj swoje dane.',
-                    onPressed: openProfile,
-                  ),
-                  const SizedBox(height: 12),
-                  buildNavigationCard(
-                    color: Colors.indigo.shade50,
-                    iconColor: Colors.indigo,
-                    icon: Icons.person_search,
-                    title: 'Znajdź znajomych',
-                    subtitle: 'Wyszukaj użytkownika i wyślij zaproszenie.',
-                    onPressed: openFindFriends,
-                  ),
-                  const SizedBox(height: 12),
-                  buildNavigationCard(
-                    color: Colors.cyan.shade50,
-                    iconColor: Colors.cyan,
-                    icon: Icons.people,
-                    title: 'Znajomi',
-                    subtitle: 'Sprawdź zaproszenia i listę znajomych.',
-                    onPressed: openFriendRequests,
-                  ),
-                  const SizedBox(height: 12),
-                  buildNavigationCard(
-                    color: Colors.purple.shade50,
-                    iconColor: Colors.purple,
-                    icon: Icons.add_circle,
-                    title: 'Dodaj wydarzenie',
-                    subtitle: 'Utwórz nowy event bez używania Swaggera.',
-                    onPressed: openCreateEvent,
-                  ),
-                  const SizedBox(height: 12),
-                  buildNavigationCard(
-                    color: Colors.teal.shade50,
-                    iconColor: Colors.teal,
-                    icon: Icons.group_add,
-                    title: 'Dodaj grupę',
-                    subtitle: 'Utwórz nową grupę bez używania Swaggera.',
-                    onPressed: openCreateGroup,
-                  ),
-                  const SizedBox(height: 12),
-                  buildNavigationCard(
-                    color: Colors.green.shade50,
-                    iconColor: Colors.green,
-                    icon: Icons.event_available,
-                    title: 'Moje wydarzenia',
-                    subtitle: 'Zobacz eventy, do których jesteś zapisany.',
-                    onPressed: openMyEvents,
-                  ),
-                  const SizedBox(height: 12),
-                  buildNavigationCard(
-                    color: Colors.blue.shade50,
-                    iconColor: Colors.blue,
-                    icon: Icons.groups,
-                    title: 'Moje grupy',
-                    subtitle: 'Zobacz grupy, do których należysz.',
-                    onPressed: openMyGroups,
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Publiczne wydarzenia',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  if (events.isNotEmpty)
-                    buildFiltersCard(
-                      filteredEventsCount: filteredEvents.length,
-                    ),
-                  if (events.isNotEmpty) const SizedBox(height: 12),
-                  if (errorMessage.isNotEmpty)
-                    Card(
-                      color: Colors.red.shade50,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Text(
-                          errorMessage,
-                          style: const TextStyle(color: Colors.red),
-                        ),
-                      ),
-                    ),
-                  if (events.isEmpty)
-                    const Card(
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Text(
-                          'Brak publicznych wydarzeń. Utwórz event przez kafelek Dodaj wydarzenie.',
-                        ),
-                      ),
-                    )
-                  else if (filteredEvents.isEmpty)
-                    Card(
-                      color: Colors.amber.shade50,
-                      child: const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Text(
-                          'Brak wydarzeń pasujących do wybranych filtrów. Wyczyść filtry albo wybierz inne wartości.',
-                        ),
-                      ),
-                    )
-                  else
-                    ...filteredEvents.map((event) {
-                      return EventCard(
-                        event: event,
-                        onTap: () {
-                          openEventDetails(event);
-                        },
-                      );
-                    }),
-                ],
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                final bool useDesktopLayout = constraints.maxWidth >= 500;
+
+                if (useDesktopLayout) {
+                  return buildDesktopLayout();
+                }
+
+                return buildMobileLayout();
+              },
+            ),
+    );
+  }
+
+  Widget buildDesktopLayout() {
+    return Row(
+      children: [
+        SizedBox(
+          width: 300,
+          child: buildLeftMenu(),
+        ),
+        const VerticalDivider(width: 1),
+        Expanded(
+          child: buildMainContent(
+            showMobileNavigationCards: false,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget buildMobileLayout() {
+    return buildMainContent(
+      showMobileNavigationCards: true,
+    );
+  }
+
+  Widget buildLeftMenu() {
+    return Material(
+      color: Colors.grey.shade100,
+      child: ListView(
+        padding: const EdgeInsets.all(12),
+        children: [
+          ProfileHeader(profile: profile),
+          const SizedBox(height: 12),
+          buildLeftMenuButton(
+            icon: Icons.person,
+            title: 'Mój profil',
+            subtitle: 'Zobacz i edytuj dane',
+            onTap: openProfile,
+          ),
+          const SizedBox(height: 8),
+          buildLeftExpansionSection(
+            icon: Icons.people,
+            title: 'Znajomi',
+            isExpanded: isFriendsExpanded,
+            onExpansionChanged: (bool value) {
+              setState(() {
+                isFriendsExpanded = value;
+              });
+            },
+            children: [
+              buildSmallMenuButton(
+                icon: Icons.person_search,
+                title: 'Znajdź znajomych',
+                onTap: openFindFriends,
+              ),
+              buildSmallMenuButton(
+                icon: Icons.people,
+                title: 'Moi znajomi i zaproszenia',
+                onTap: openFriendRequests,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          buildLeftExpansionSection(
+            icon: Icons.event,
+            title: 'Wydarzenia',
+            isExpanded: isEventsExpanded,
+            onExpansionChanged: (bool value) {
+              setState(() {
+                isEventsExpanded = value;
+              });
+            },
+            children: [
+              buildSmallMenuButton(
+                icon: Icons.add_circle,
+                title: 'Dodaj wydarzenie',
+                onTap: openCreateEvent,
+              ),
+              buildSmallMenuButton(
+                icon: Icons.event_available,
+                title: 'Moje wydarzenia',
+                onTap: openMyEvents,
+              ),
+              buildSmallMenuButton(
+                icon: Icons.public,
+                title: 'Publiczne wydarzenia',
+                onTap: scrollToPublicEvents,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          buildLeftExpansionSection(
+            icon: Icons.groups,
+            title: 'Grupy',
+            isExpanded: isGroupsExpanded,
+            onExpansionChanged: (bool value) {
+              setState(() {
+                isGroupsExpanded = value;
+              });
+            },
+            children: [
+              buildSmallMenuButton(
+                icon: Icons.group_add,
+                title: 'Dodaj grupę',
+                onTap: openCreateGroup,
+              ),
+              buildSmallMenuButton(
+                icon: Icons.groups,
+                title: 'Moje grupy',
+                onTap: openMyGroups,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          buildLeftMenuButton(
+            icon: Icons.logout,
+            title: 'Wyloguj',
+            subtitle: 'Zakończ sesję',
+            onTap: logout,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildMainContent({
+    required bool showMobileNavigationCards,
+  }) {
+    final List<AppEvent> filteredEvents = getFilteredEvents();
+
+    return RefreshIndicator(
+      onRefresh: loadData,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          if (showMobileNavigationCards) ProfileHeader(profile: profile),
+          if (showMobileNavigationCards) const SizedBox(height: 12),
+          if (showMobileNavigationCards)
+            buildNavigationCardsForMobile(),
+          if (showMobileNavigationCards) const SizedBox(height: 16),
+          Container(
+            key: publicEventsKey,
+            child: const Text(
+              'Publiczne wydarzenia',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
               ),
             ),
+          ),
+          const SizedBox(height: 12),
+          if (events.isNotEmpty)
+            buildFiltersCard(
+              filteredEventsCount: filteredEvents.length,
+            ),
+          if (events.isNotEmpty) const SizedBox(height: 12),
+          if (errorMessage.isNotEmpty)
+            Card(
+              color: Colors.red.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  errorMessage,
+                  style: const TextStyle(color: Colors.red),
+                ),
+              ),
+            ),
+          if (events.isEmpty)
+            const Card(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Text(
+                  'Brak publicznych wydarzeń. Utwórz event przez menu Dodaj wydarzenie.',
+                ),
+              ),
+            )
+          else if (filteredEvents.isEmpty)
+            Card(
+              color: Colors.amber.shade50,
+              child: const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text(
+                  'Brak wydarzeń pasujących do wybranych filtrów. Wyczyść filtry albo wybierz inne wartości.',
+                ),
+              ),
+            )
+          else
+            ...filteredEvents.map((event) {
+              return EventCard(
+                event: event,
+                onTap: () {
+                  openEventDetails(event);
+                },
+              );
+            }),
+        ],
+      ),
+    );
+  }
+
+  Widget buildNavigationCardsForMobile() {
+    return Column(
+      children: [
+        buildNavigationCard(
+          color: Colors.orange.shade50,
+          iconColor: Colors.orange,
+          icon: Icons.person,
+          title: 'Mój profil',
+          subtitle: 'Zobacz i edytuj swoje dane.',
+          onPressed: openProfile,
+        ),
+        const SizedBox(height: 12),
+        buildNavigationCard(
+          color: Colors.indigo.shade50,
+          iconColor: Colors.indigo,
+          icon: Icons.person_search,
+          title: 'Znajdź znajomych',
+          subtitle: 'Wyszukaj użytkownika i wyślij zaproszenie.',
+          onPressed: openFindFriends,
+        ),
+        const SizedBox(height: 12),
+        buildNavigationCard(
+          color: Colors.cyan.shade50,
+          iconColor: Colors.cyan,
+          icon: Icons.people,
+          title: 'Znajomi',
+          subtitle: 'Sprawdź zaproszenia i listę znajomych.',
+          onPressed: openFriendRequests,
+        ),
+        const SizedBox(height: 12),
+        buildNavigationCard(
+          color: Colors.purple.shade50,
+          iconColor: Colors.purple,
+          icon: Icons.add_circle,
+          title: 'Dodaj wydarzenie',
+          subtitle: 'Utwórz nowy event bez używania Swaggera.',
+          onPressed: openCreateEvent,
+        ),
+        const SizedBox(height: 12),
+        buildNavigationCard(
+          color: Colors.teal.shade50,
+          iconColor: Colors.teal,
+          icon: Icons.group_add,
+          title: 'Dodaj grupę',
+          subtitle: 'Utwórz nową grupę bez używania Swaggera.',
+          onPressed: openCreateGroup,
+        ),
+        const SizedBox(height: 12),
+        buildNavigationCard(
+          color: Colors.green.shade50,
+          iconColor: Colors.green,
+          icon: Icons.event_available,
+          title: 'Moje wydarzenia',
+          subtitle: 'Zobacz eventy, do których jesteś zapisany.',
+          onPressed: openMyEvents,
+        ),
+        const SizedBox(height: 12),
+        buildNavigationCard(
+          color: Colors.blue.shade50,
+          iconColor: Colors.blue,
+          icon: Icons.groups,
+          title: 'Moje grupy',
+          subtitle: 'Zobacz grupy, do których należysz.',
+          onPressed: openMyGroups,
+        ),
+      ],
+    );
+  }
+
+  Widget buildLeftMenuButton({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: ListTile(
+        dense: true,
+        leading: Icon(icon),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(subtitle),
+        onTap: onTap,
+      ),
+    );
+  }
+
+  Widget buildLeftExpansionSection({
+    required IconData icon,
+    required String title,
+    required bool isExpanded,
+    required ValueChanged<bool> onExpansionChanged,
+    required List<Widget> children,
+  }) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: ExpansionTile(
+        initiallyExpanded: isExpanded,
+        onExpansionChanged: onExpansionChanged,
+        leading: Icon(icon),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        children: children,
+      ),
+    );
+  }
+
+  Widget buildSmallMenuButton({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 10,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(title),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -595,7 +848,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final String safeValue = options.contains(currentValue) ? currentValue : '';
 
     return DropdownButtonFormField<String>(
-      value: safeValue,
+      key: ValueKey('$label-$safeValue'),
+      initialValue: safeValue,
       isExpanded: true,
       decoration: InputDecoration(
         labelText: label,
