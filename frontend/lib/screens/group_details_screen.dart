@@ -30,6 +30,7 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
 
   bool isLoading = true;
   bool isAddingMember = false;
+  bool isDeletingGroup = false;
 
   int? addingUserId;
 
@@ -43,7 +44,6 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
   @override
   void initState() {
     super.initState();
-
     loadGroupData();
   }
 
@@ -108,6 +108,70 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
     );
 
     loadGroupData();
+  }
+
+  Future<void> confirmDeleteGroup(AppGroup groupToDelete) async {
+    final bool? shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Usunąć grupę?'),
+          content: Text(
+            'Czy na pewno chcesz usunąć grupę "${groupToDelete.name}"? '
+            'Tej operacji nie da się cofnąć.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, false);
+              },
+              child: const Text('Anuluj'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+              child: const Text('Usuń'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldDelete == true) {
+      deleteGroup(groupToDelete);
+    }
+  }
+
+  Future<void> deleteGroup(AppGroup groupToDelete) async {
+    setState(() {
+      isDeletingGroup = true;
+      errorMessage = '';
+      successMessage = '';
+    });
+
+    try {
+      await groupsApiService.deleteGroup(
+        token: widget.token,
+        groupId: groupToDelete.id,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.pop(context, true);
+    } catch (error) {
+      setState(() {
+        errorMessage = error.toString().replaceFirst('Exception: ', '');
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          isDeletingGroup = false;
+        });
+      }
+    }
   }
 
   Future<void> addMemberToGroup(UserProfile friend) async {
@@ -294,37 +358,61 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
       color: Colors.orange.shade50,
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(
-              Icons.edit,
-              size: 32,
-              color: Colors.orange,
-            ),
-            const SizedBox(width: 16),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Edycja grupy',
+            const Row(
+              children: [
+                Icon(
+                  Icons.settings,
+                  size: 32,
+                  color: Colors.orange,
+                ),
+                SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    'Zarządzanie grupą',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Zmień nazwę, opis, miasto albo typ aktywności.',
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-            FilledButton(
-              onPressed: () {
-                openEditGroup(group);
-              },
-              child: const Text('Edytuj'),
+            const SizedBox(height: 8),
+            const Text(
+              'Edytuj dane grupy albo usuń grupę, jeśli jesteś jej właścicielem.',
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: isDeletingGroup
+                        ? null
+                        : () {
+                            openEditGroup(group);
+                          },
+                    icon: const Icon(Icons.edit),
+                    label: const Text('Edytuj'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: isDeletingGroup
+                        ? null
+                        : () {
+                            confirmDeleteGroup(group);
+                          },
+                    icon: const Icon(Icons.delete),
+                    label: isDeletingGroup
+                        ? const Text('Usuwanie...')
+                        : const Text('Usuń'),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

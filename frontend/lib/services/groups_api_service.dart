@@ -165,6 +165,28 @@ class GroupsApiService {
     return AppGroup.fromJson(data);
   }
 
+  Future<void> deleteGroup({
+    required String token,
+    required int groupId,
+  }) async {
+    final Uri url = Uri.parse('${ApiConfig.baseUrl}/groups/$groupId');
+
+    final http.Response response = await http.delete(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      final Map<String, dynamic> data = jsonDecode(response.body);
+
+      throw Exception(
+        data['detail'] ?? 'Nie udało się usunąć grupy',
+      );
+    }
+  }
+
   Future<void> addMemberToGroup({
     required String token,
     required int groupId,
