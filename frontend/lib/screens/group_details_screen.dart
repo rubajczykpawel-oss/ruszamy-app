@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../models/app_group.dart';
 import '../models/group_member.dart';
+import '../models/user_profile.dart';
+import '../services/friends_api_service.dart';
 import '../services/groups_api_service.dart';
 import '../widgets/info_chip.dart';
 
@@ -23,17 +25,19 @@ class GroupDetailsScreen extends StatefulWidget {
 
 class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
   final GroupsApiService groupsApiService = GroupsApiService();
-
-  final TextEditingController memberUserIdController = TextEditingController();
+  final FriendsApiService friendsApiService = FriendsApiService();
 
   bool isLoading = true;
   bool isAddingMember = false;
+
+  int? addingUserId;
 
   String errorMessage = '';
   String successMessage = '';
 
   AppGroup? group;
   List<GroupMember> members = [];
+  List<UserProfile> friends = [];
 
   @override
   void initState() {
@@ -42,11 +46,16 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
     loadGroupData();
   }
 
-  Future<void> loadGroupData() async {
+  Future<void> loadGroupData({
+    bool clearMessages = true,
+  }) async {
     setState(() {
       isLoading = true;
       errorMessage = '';
-      successMessage = '';
+
+      if (clearMessages) {
+        successMessage = '';
+      }
     });
 
     try {
@@ -61,9 +70,15 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
         token: widget.token,
       );
 
+      final List<UserProfile> loadedFriends =
+          await friendsApiService.getMyFriends(
+        token: widget.token,
+      );
+
       setState(() {
         group = loadedGroup;
         members = loadedMembers;
+        friends = loadedFriends;
       });
     } catch (error) {
       setState(() {
@@ -78,20 +93,10 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
     }
   }
 
-  Future<void> addMemberToGroup() async {
-    final int? userId = int.tryParse(memberUserIdController.text.trim());
-
-    if (userId == null) {
-      setState(() {
-        errorMessage = 'ID użytkownika musi być liczbą.';
-        successMessage = '';
-      });
-
-      return;
-    }
-
+  Future<void> addMemberToGroup(UserProfile friend) async {
     setState(() {
       isAddingMember = true;
+      addingUserId = friend.id;
       errorMessage = '';
       successMessage = '';
     });
@@ -100,16 +105,14 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
       await groupsApiService.addMemberToGroup(
         token: widget.token,
         groupId: widget.groupId,
-        userId: userId,
+        userId: friend.id,
       );
 
-      memberUserIdController.clear();
-
       setState(() {
-        successMessage = 'Użytkownik został dodany do grupy.';
+        successMessage = 'Dodano użytkownika ${friend.username} do grupy.';
       });
 
-      await loadGroupData();
+      await loadGroupData(clearMessages: false);
     } catch (error) {
       setState(() {
         errorMessage = error.toString().replaceFirst('Exception: ', '');
@@ -118,16 +121,16 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
       if (mounted) {
         setState(() {
           isAddingMember = false;
+          addingUserId = null;
         });
       }
     }
   }
 
-  @override
-  void dispose() {
-    memberUserIdController.dispose();
-
-    super.dispose();
+  bool isFriendAlreadyInGroup(UserProfile friend) {
+    return members.any((member) {
+      return member.userId == friend.id;
+    });
   }
 
   @override
@@ -212,16 +215,8 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
             ],
           ),
           const SizedBox(height: 24),
-          buildAddMemberCard(),
+          buildAddFriendsCard(),
           const SizedBox(height: 24),
-          const Text(
-            'Członkowie grupy',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
           if (errorMessage.isNotEmpty)
             Card(
               color: Colors.red.shade50,
@@ -244,6 +239,15 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                 ),
               ),
             ),
+          const SizedBox(height: 12),
+          const Text(
+            'Członkowie grupy',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
           if (members.isEmpty)
             const Card(
               child: Padding(
@@ -260,7 +264,7 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
     );
   }
 
-  Widget buildAddMemberCard() {
+  Widget buildAddFriendsCard() {
     return Card(
       color: Colors.teal.shade50,
       child: Padding(
@@ -269,7 +273,7 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Dodaj członka do grupy',
+              'Dodaj znajomego do grupy',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -277,34 +281,77 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Wpisz ID użytkownika, którego chcesz dodać. Backend sprawdzi, czy możesz dodać tę osobę.',
+              'Wybierz znajomego z listy. Nie musisz już wpisywać ID ręcznie.',
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: memberUserIdController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'ID użytkownika',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.person_add),
+            if (friends.isEmpty)
+              const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text(
+                    'Nie masz jeszcze znajomych do dodania. Najpierw dodaj znajomego i zaakceptuj zaproszenie.',
+                  ),
+                ),
+              )
+            else
+              ...friends.map((friend) {
+                return buildFriendToAddCard(friend);
+              }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildFriendToAddCard(UserProfile friend) {
+    final bool alreadyInGroup = isFriendAlreadyInGroup(friend);
+    final bool isCurrentFriendLoading = addingUserId == friend.id;
+
+    final String cityText = friend.city ?? 'Brak miasta';
+    final String ageText = friend.age == null ? 'Brak wieku' : '${friend.age} lat';
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            const CircleAvatar(
+              radius: 24,
+              child: Icon(Icons.person),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    friend.username,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(friend.email),
+                  const SizedBox(height: 4),
+                  Text('Miasto: $cityText'),
+                  Text('Wiek: $ageText'),
+                  Text('ID: ${friend.id}'),
+                ],
               ),
             ),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 48,
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: isAddingMember ? null : addMemberToGroup,
-                icon: const Icon(Icons.group_add),
-                label: isAddingMember
-                    ? const Text('Dodawanie...')
-                    : const Text('Dodaj członka'),
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Podpowiedź: ID użytkownika zobaczysz np. na ekranie Znajdź znajomych albo Znajomi.',
-              style: TextStyle(fontSize: 12),
+            const SizedBox(width: 12),
+            FilledButton(
+              onPressed: alreadyInGroup || isAddingMember
+                  ? null
+                  : () {
+                      addMemberToGroup(friend);
+                    },
+              child: alreadyInGroup
+                  ? const Text('Już w grupie')
+                  : isCurrentFriendLoading
+                      ? const Text('Dodaję...')
+                      : const Text('Dodaj'),
             ),
           ],
         ),
