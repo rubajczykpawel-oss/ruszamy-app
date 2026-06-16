@@ -1,19 +1,99 @@
 import 'package:flutter/material.dart';
 
 import '../models/user_profile.dart';
+import '../services/friends_api_service.dart';
 
-class UserDetailsScreen extends StatelessWidget {
+class UserDetailsScreen extends StatefulWidget {
   final UserProfile user;
+  final String token;
 
   const UserDetailsScreen({
     super.key,
     required this.user,
+    required this.token,
   });
 
   @override
+  State<UserDetailsScreen> createState() {
+    return _UserDetailsScreenState();
+  }
+}
+
+class _UserDetailsScreenState extends State<UserDetailsScreen> {
+  final FriendsApiService friendsApiService = FriendsApiService();
+
+  bool isRemovingFriend = false;
+  String errorMessage = '';
+
+  Future<void> confirmRemoveFriend() async {
+    final bool? shouldRemove = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Usunąć znajomego?'),
+          content: Text(
+            'Czy na pewno chcesz usunąć użytkownika "${widget.user.username}" ze znajomych?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, false);
+              },
+              child: const Text('Anuluj'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+              child: const Text('Usuń'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldRemove == true) {
+      removeFriend();
+    }
+  }
+
+  Future<void> removeFriend() async {
+    setState(() {
+      isRemovingFriend = true;
+      errorMessage = '';
+    });
+
+    try {
+      await friendsApiService.removeFriend(
+        token: widget.token,
+        friendId: widget.user.id,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.pop(context, true);
+    } catch (error) {
+      setState(() {
+        errorMessage = error.toString().replaceFirst('Exception: ', '');
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          isRemovingFriend = false;
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final String cityText = user.city ?? 'Brak miasta';
-    final String ageText = user.age == null ? 'Brak wieku' : '${user.age} lat';
+    final String cityText = widget.user.city ?? 'Brak miasta';
+
+    final String ageText = widget.user.age == null
+        ? 'Brak wieku'
+        : '${widget.user.age} lat';
 
     return Scaffold(
       appBar: AppBar(
@@ -37,7 +117,7 @@ class UserDetailsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    user.username,
+                    widget.user.username,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 26,
@@ -46,7 +126,7 @@ class UserDetailsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    user.email,
+                    widget.user.email,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 16,
@@ -65,13 +145,13 @@ class UserDetailsScreen extends StatelessWidget {
                   buildInfoRow(
                     icon: Icons.badge,
                     label: 'ID użytkownika',
-                    value: user.id.toString(),
+                    value: widget.user.id.toString(),
                   ),
                   const Divider(),
                   buildInfoRow(
                     icon: Icons.email,
                     label: 'Email',
-                    value: user.email,
+                    value: widget.user.email,
                   ),
                   const Divider(),
                   buildInfoRow(
@@ -90,12 +170,58 @@ class UserDetailsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
+          if (errorMessage.isNotEmpty)
+            Card(
+              color: Colors.red.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  errorMessage,
+                  style: const TextStyle(color: Colors.red),
+                ),
+              ),
+            ),
+          if (errorMessage.isNotEmpty) const SizedBox(height: 16),
           Card(
-            color: Colors.green.shade50,
-            child: const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text(
-                'To jest prosty ekran profilu znajomego. Na razie pokazujemy dane, które frontend już ma pobrane z backendu.',
+            color: Colors.red.shade50,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(
+                        Icons.person_remove,
+                        color: Colors.red,
+                      ),
+                      SizedBox(width: 12),
+                      Text(
+                        'Usuń znajomego',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Po usunięciu ta osoba zniknie z Twojej listy znajomych.',
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    height: 44,
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: isRemovingFriend ? null : confirmRemoveFriend,
+                      icon: const Icon(Icons.person_remove),
+                      label: isRemovingFriend
+                          ? const Text('Usuwanie...')
+                          : const Text('Usuń znajomego'),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

@@ -330,18 +330,21 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> openUserDetails(UserProfile user) async {
-    await Navigator.push(
+    final bool? shouldRefresh = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (context) {
           return UserDetailsScreen(
             user: user,
+            token: widget.token,
           );
         },
       ),
     );
 
-    loadData();
+    if (shouldRefresh == true) {
+      loadData();
+    }
   }
 
   Future<void> openCreateEvent() async {
