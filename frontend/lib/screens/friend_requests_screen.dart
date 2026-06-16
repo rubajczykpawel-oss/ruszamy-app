@@ -23,6 +23,7 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
 
   bool isLoading = true;
   int? actionFriendshipId;
+  int? removingFriendId;
 
   String errorMessage = '';
   String successMessage = '';
@@ -136,6 +137,69 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
       if (mounted) {
         setState(() {
           actionFriendshipId = null;
+        });
+      }
+    }
+  }
+
+  Future<void> confirmRemoveFriend(UserProfile friend) async {
+    final bool? shouldRemove = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Usunąć znajomego?'),
+          content: Text(
+            'Czy na pewno chcesz usunąć użytkownika "${friend.username}" ze znajomych?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, false);
+              },
+              child: const Text('Anuluj'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+              child: const Text('Usuń'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldRemove == true) {
+      removeFriend(friend);
+    }
+  }
+
+  Future<void> removeFriend(UserProfile friend) async {
+    setState(() {
+      removingFriendId = friend.id;
+      errorMessage = '';
+      successMessage = '';
+    });
+
+    try {
+      await friendsApiService.removeFriend(
+        token: widget.token,
+        friendId: friend.id,
+      );
+
+      setState(() {
+        successMessage = 'Usunięto użytkownika ${friend.username} ze znajomych.';
+      });
+
+      await loadData();
+    } catch (error) {
+      setState(() {
+        errorMessage = error.toString().replaceFirst('Exception: ', '');
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          removingFriendId = null;
         });
       }
     }
@@ -504,6 +568,7 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
   Widget buildFriendCard(UserProfile friend) {
     final String cityText = friend.city ?? 'Brak miasta';
     final String ageText = friend.age == null ? 'Brak wieku' : '${friend.age} lat';
+    final bool isRemoving = removingFriendId == friend.id;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -534,6 +599,18 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
                   Text('ID: ${friend.id}'),
                 ],
               ),
+            ),
+            const SizedBox(width: 12),
+            OutlinedButton.icon(
+              onPressed: isRemoving
+                  ? null
+                  : () {
+                      confirmRemoveFriend(friend);
+                    },
+              icon: const Icon(Icons.person_remove),
+              label: isRemoving
+                  ? const Text('Usuwanie...')
+                  : const Text('Usuń'),
             ),
           ],
         ),

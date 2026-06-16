@@ -24,7 +24,7 @@ class FriendsApiService {
       final Map<String, dynamic> data = jsonDecode(response.body);
 
       throw Exception(
-        data['detail'] ?? 'Nie udało się wysłać zaproszenia do znajomych',
+        data['detail'] ?? 'Nie udało się wysłać zaproszenia',
       );
     }
   }
@@ -125,7 +125,7 @@ class FriendsApiService {
       },
     );
 
-    if (response.statusCode != 200 && response.statusCode != 201) {
+    if (response.statusCode != 200) {
       final Map<String, dynamic> data = jsonDecode(response.body);
 
       throw Exception(
@@ -149,11 +149,37 @@ class FriendsApiService {
       },
     );
 
-    if (response.statusCode != 200 && response.statusCode != 201) {
+    if (response.statusCode != 200) {
       final Map<String, dynamic> data = jsonDecode(response.body);
 
       throw Exception(
         data['detail'] ?? 'Nie udało się odrzucić zaproszenia',
+      );
+    }
+  }
+
+  Future<void> removeFriend({
+    required String token,
+    required int friendId,
+  }) async {
+    final Uri url = Uri.parse('${ApiConfig.baseUrl}/friends/$friendId');
+
+    final http.Response response = await http.delete(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      if (response.body.isEmpty) {
+        throw Exception('Nie udało się usunąć znajomego');
+      }
+
+      final Map<String, dynamic> data = jsonDecode(response.body);
+
+      throw Exception(
+        data['detail'] ?? 'Nie udało się usunąć znajomego',
       );
     }
   }
