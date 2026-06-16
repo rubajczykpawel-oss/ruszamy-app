@@ -126,6 +126,45 @@ class GroupsApiService {
     return AppGroup.fromJson(data);
   }
 
+  Future<AppGroup> updateGroup({
+    required String token,
+    required int groupId,
+    required String name,
+    required String description,
+    required String city,
+    required String activityType,
+  }) async {
+    final Uri url = Uri.parse('${ApiConfig.baseUrl}/groups/$groupId');
+
+    final Map<String, dynamic> body = {
+      'name': name.trim(),
+      'description': description.trim(),
+      'city': city.trim(),
+      'activity_type': activityType.trim(),
+    };
+
+    final http.Response response = await http.put(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode != 200) {
+      final Map<String, dynamic> data = jsonDecode(response.body);
+
+      throw Exception(
+        data['detail'] ?? 'Nie udało się zaktualizować grupy',
+      );
+    }
+
+    final Map<String, dynamic> data = jsonDecode(response.body);
+
+    return AppGroup.fromJson(data);
+  }
+
   Future<void> addMemberToGroup({
     required String token,
     required int groupId,

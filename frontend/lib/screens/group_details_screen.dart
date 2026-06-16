@@ -6,6 +6,7 @@ import '../models/user_profile.dart';
 import '../services/friends_api_service.dart';
 import '../services/groups_api_service.dart';
 import '../widgets/info_chip.dart';
+import 'edit_group_screen.dart';
 
 class GroupDetailsScreen extends StatefulWidget {
   final int groupId;
@@ -93,6 +94,22 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
     }
   }
 
+  Future<void> openEditGroup(AppGroup groupToEdit) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) {
+          return EditGroupScreen(
+            token: widget.token,
+            group: groupToEdit,
+          );
+        },
+      ),
+    );
+
+    loadGroupData();
+  }
+
   Future<void> addMemberToGroup(UserProfile friend) async {
     setState(() {
       isAddingMember = true;
@@ -142,7 +159,11 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
         title: const Text('Szczegóły grupy'),
         actions: [
           IconButton(
-            onPressed: isLoading ? null : loadGroupData,
+            onPressed: isLoading
+                ? null
+                : () {
+                    loadGroupData();
+                  },
             icon: const Icon(Icons.refresh),
             tooltip: 'Odśwież',
           ),
@@ -175,7 +196,9 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
 
   Widget buildGroupDetails(AppGroup group) {
     return RefreshIndicator(
-      onRefresh: loadGroupData,
+      onRefresh: () {
+        return loadGroupData();
+      },
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -214,6 +237,8 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
               ),
             ],
           ),
+          const SizedBox(height: 20),
+          buildGroupActionsCard(group),
           const SizedBox(height: 24),
           buildAddFriendsCard(),
           const SizedBox(height: 24),
@@ -260,6 +285,49 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
               return buildMemberCard(member);
             }),
         ],
+      ),
+    );
+  }
+
+  Widget buildGroupActionsCard(AppGroup group) {
+    return Card(
+      color: Colors.orange.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.edit,
+              size: 32,
+              color: Colors.orange,
+            ),
+            const SizedBox(width: 16),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Edycja grupy',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Zmień nazwę, opis, miasto albo typ aktywności.',
+                  ),
+                ],
+              ),
+            ),
+            FilledButton(
+              onPressed: () {
+                openEditGroup(group);
+              },
+              child: const Text('Edytuj'),
+            ),
+          ],
+        ),
       ),
     );
   }
