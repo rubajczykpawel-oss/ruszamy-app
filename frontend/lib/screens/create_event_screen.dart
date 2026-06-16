@@ -42,16 +42,59 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
 
   AppEvent? createdEvent;
 
-  @override
-  void initState() {
-    super.initState();
+  Future<void> pickDate() async {
+    final DateTime now = DateTime.now();
 
-    activityTypeController.text = 'walking';
-    cityController.text = 'Wrocław';
-    dateController.text = '2026-06-25';
-    timeController.text = '18:30:00';
-    maxParticipantsController.text = '10';
-    levelController.text = 'easy';
+    final DateTime? selectedDate = await showDatePicker(
+      context: context,
+      initialDate: now,
+      firstDate: now,
+      lastDate: DateTime(now.year + 5),
+    );
+
+    if (selectedDate == null) {
+      return;
+    }
+
+    final String formattedDate = formatDate(selectedDate);
+
+    setState(() {
+      dateController.text = formattedDate;
+    });
+  }
+
+  Future<void> pickTime() async {
+    final TimeOfDay now = TimeOfDay.now();
+
+    final TimeOfDay? selectedTime = await showTimePicker(
+      context: context,
+      initialTime: now,
+    );
+
+    if (selectedTime == null) {
+      return;
+    }
+
+    final String formattedTime = formatTime(selectedTime);
+
+    setState(() {
+      timeController.text = formattedTime;
+    });
+  }
+
+  String formatDate(DateTime date) {
+    final String year = date.year.toString();
+    final String month = date.month.toString().padLeft(2, '0');
+    final String day = date.day.toString().padLeft(2, '0');
+
+    return '$year-$month-$day';
+  }
+
+  String formatTime(TimeOfDay time) {
+    final String hour = time.hour.toString().padLeft(2, '0');
+    final String minute = time.minute.toString().padLeft(2, '0');
+
+    return '$hour:$minute:00';
   }
 
   Future<void> createEvent() async {
@@ -81,7 +124,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     }
 
     try {
-      final AppEvent newEvent = await eventsApiService.createEvent(
+      final AppEvent savedEvent = await eventsApiService.createEvent(
         token: widget.token,
         title: titleController.text,
         description: descriptionController.text,
@@ -99,7 +142,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       );
 
       setState(() {
-        createdEvent = newEvent;
+        createdEvent = savedEvent;
         successMessage = 'Wydarzenie zostało utworzone.';
       });
     } catch (error) {
@@ -115,27 +158,8 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     }
   }
 
-  void clearForm() {
-    titleController.clear();
-    descriptionController.clear();
-    locationNameController.clear();
-    ageMinController.clear();
-    ageMaxController.clear();
-    groupIdController.clear();
-
-    activityTypeController.text = 'walking';
-    cityController.text = 'Wrocław';
-    dateController.text = '2026-06-25';
-    timeController.text = '18:30:00';
-    maxParticipantsController.text = '10';
-    levelController.text = 'easy';
-
-    setState(() {
-      isPublic = true;
-      errorMessage = '';
-      successMessage = '';
-      createdEvent = null;
-    });
+  void goBack() {
+    Navigator.pop(context, true);
   }
 
   @override
@@ -174,8 +198,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Utwórz wydarzenie bez używania Swaggera.',
-            style: TextStyle(fontSize: 16),
+            'Uzupełnij dane wydarzenia. Datę i godzinę możesz wybrać z okienka.',
           ),
           const SizedBox(height: 20),
           buildTextField(
@@ -209,17 +232,9 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             icon: Icons.place,
           ),
           const SizedBox(height: 16),
-          buildTextField(
-            controller: dateController,
-            label: 'Data, np. 2026-06-25',
-            icon: Icons.calendar_month,
-          ),
+          buildDatePickerField(),
           const SizedBox(height: 16),
-          buildTextField(
-            controller: timeController,
-            label: 'Godzina, np. 18:30:00',
-            icon: Icons.access_time,
-          ),
+          buildTimePickerField(),
           const SizedBox(height: 16),
           buildTextField(
             controller: maxParticipantsController,
@@ -297,7 +312,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  'Utworzono event: ${createdEvent!.title}\nID: ${createdEvent!.id}',
+                  'Utworzono event: ${createdEvent!.title}\nMiasto: ${createdEvent!.city}\nData: ${createdEvent!.date}\nGodzina: ${createdEvent!.time}',
                 ),
               ),
             ),
@@ -316,24 +331,67 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           SizedBox(
             height: 48,
             child: OutlinedButton.icon(
-              onPressed: isSaving ? null : clearForm,
-              icon: const Icon(Icons.cleaning_services),
-              label: const Text('Wyczyść formularz'),
+              onPressed: goBack,
+              icon: const Icon(Icons.arrow_back),
+              label: const Text('Wróć'),
             ),
           ),
-          const SizedBox(height: 24),
-          const Text(
-            'Formaty wymagane przez backend:',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 4),
-          const Text('Data: YYYY-MM-DD, np. 2026-06-25'),
-          const Text('Godzina: HH:MM:SS, np. 18:30:00'),
-          const Text('Jeśli event nie jest grupowy, zostaw ID grupy puste.'),
         ],
       ),
+    );
+  }
+
+  Widget buildDatePickerField() {
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: dateController,
+            readOnly: true,
+            decoration: const InputDecoration(
+              labelText: 'Data',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.calendar_month),
+            ),
+            onTap: pickDate,
+          ),
+        ),
+        const SizedBox(width: 12),
+        SizedBox(
+          height: 56,
+          child: FilledButton(
+            onPressed: pickDate,
+            child: const Text('Wybierz'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget buildTimePickerField() {
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: timeController,
+            readOnly: true,
+            decoration: const InputDecoration(
+              labelText: 'Godzina',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.access_time),
+            ),
+            onTap: pickTime,
+          ),
+        ),
+        const SizedBox(width: 12),
+        SizedBox(
+          height: 56,
+          child: FilledButton(
+            onPressed: pickTime,
+            child: const Text('Wybierz'),
+          ),
+        ),
+      ],
     );
   }
 

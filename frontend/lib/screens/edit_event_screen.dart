@@ -63,6 +63,86 @@ class _EditEventScreenState extends State<EditEventScreen> {
     isPublic = widget.event.isPublic;
   }
 
+  Future<void> pickDate() async {
+    final DateTime initialDate = parseInitialDate();
+
+    final DateTime? selectedDate = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime.now(),
+      lastDate: DateTime(DateTime.now().year + 5),
+    );
+
+    if (selectedDate == null) {
+      return;
+    }
+
+    final String formattedDate = formatDate(selectedDate);
+
+    setState(() {
+      dateController.text = formattedDate;
+    });
+  }
+
+  Future<void> pickTime() async {
+    final TimeOfDay initialTime = parseInitialTime();
+
+    final TimeOfDay? selectedTime = await showTimePicker(
+      context: context,
+      initialTime: initialTime,
+    );
+
+    if (selectedTime == null) {
+      return;
+    }
+
+    final String formattedTime = formatTime(selectedTime);
+
+    setState(() {
+      timeController.text = formattedTime;
+    });
+  }
+
+  DateTime parseInitialDate() {
+    try {
+      return DateTime.parse(dateController.text);
+    } catch (_) {
+      return DateTime.now();
+    }
+  }
+
+  TimeOfDay parseInitialTime() {
+    final List<String> parts = timeController.text.split(':');
+
+    if (parts.length < 2) {
+      return TimeOfDay.now();
+    }
+
+    final int? hour = int.tryParse(parts[0]);
+    final int? minute = int.tryParse(parts[1]);
+
+    if (hour == null || minute == null) {
+      return TimeOfDay.now();
+    }
+
+    return TimeOfDay(hour: hour, minute: minute);
+  }
+
+  String formatDate(DateTime date) {
+    final String year = date.year.toString();
+    final String month = date.month.toString().padLeft(2, '0');
+    final String day = date.day.toString().padLeft(2, '0');
+
+    return '$year-$month-$day';
+  }
+
+  String formatTime(TimeOfDay time) {
+    final String hour = time.hour.toString().padLeft(2, '0');
+    final String minute = time.minute.toString().padLeft(2, '0');
+
+    return '$hour:$minute:00';
+  }
+
   Future<void> updateEvent() async {
     setState(() {
       isSaving = true;
@@ -202,17 +282,9 @@ class _EditEventScreenState extends State<EditEventScreen> {
             icon: Icons.place,
           ),
           const SizedBox(height: 16),
-          buildTextField(
-            controller: dateController,
-            label: 'Data, np. 2026-06-25',
-            icon: Icons.calendar_month,
-          ),
+          buildDatePickerField(),
           const SizedBox(height: 16),
-          buildTextField(
-            controller: timeController,
-            label: 'Godzina, np. 18:30:00',
-            icon: Icons.access_time,
-          ),
+          buildTimePickerField(),
           const SizedBox(height: 16),
           buildTextField(
             controller: maxParticipantsController,
@@ -290,7 +362,7 @@ class _EditEventScreenState extends State<EditEventScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  'Zaktualizowano event: ${updatedEvent!.title}\nMiasto: ${updatedEvent!.city}\nData: ${updatedEvent!.date}',
+                  'Zaktualizowano event: ${updatedEvent!.title}\nMiasto: ${updatedEvent!.city}\nData: ${updatedEvent!.date}\nGodzina: ${updatedEvent!.time}',
                 ),
               ),
             ),
@@ -316,6 +388,60 @@ class _EditEventScreenState extends State<EditEventScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget buildDatePickerField() {
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: dateController,
+            readOnly: true,
+            decoration: const InputDecoration(
+              labelText: 'Data',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.calendar_month),
+            ),
+            onTap: pickDate,
+          ),
+        ),
+        const SizedBox(width: 12),
+        SizedBox(
+          height: 56,
+          child: FilledButton(
+            onPressed: pickDate,
+            child: const Text('Wybierz'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget buildTimePickerField() {
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: timeController,
+            readOnly: true,
+            decoration: const InputDecoration(
+              labelText: 'Godzina',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.access_time),
+            ),
+            onTap: pickTime,
+          ),
+        ),
+        const SizedBox(width: 12),
+        SizedBox(
+          height: 56,
+          child: FilledButton(
+            onPressed: pickTime,
+            child: const Text('Wybierz'),
+          ),
+        ),
+      ],
     );
   }
 
