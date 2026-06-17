@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import '../models/user_profile.dart';
 import '../services/friends_api_service.dart';
 import '../widgets/info_chip.dart';
+import '../widgets/info_row.dart';
 import '../widgets/message_card.dart';
 import '../widgets/section_header.dart';
+import '../widgets/stat_card.dart';
 
 class UserDetailsScreen extends StatefulWidget {
   final UserProfile user;
@@ -284,7 +286,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
           children: [
             SizedBox(
               width: cardWidth,
-              child: buildStatCard(
+              child: StatCard(
                 icon: Icons.person,
                 value: widget.user.username,
                 title: 'Użytkownik',
@@ -295,7 +297,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
             ),
             SizedBox(
               width: cardWidth,
-              child: buildStatCard(
+              child: StatCard(
                 icon: Icons.location_city,
                 value: widget.user.city ?? '-',
                 title: 'Miasto',
@@ -306,7 +308,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
             ),
             SizedBox(
               width: cardWidth,
-              child: buildStatCard(
+              child: StatCard(
                 icon: Icons.cake,
                 value: widget.user.age?.toString() ?? '-',
                 title: 'Wiek',
@@ -318,65 +320,6 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
           ],
         );
       },
-    );
-  }
-
-  Widget buildStatCard({
-    required IconData icon,
-    required String value,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required Color iconColor,
-  }) {
-    return Card(
-      color: color,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            CircleAvatar(
-              backgroundColor: Colors.white,
-              child: Icon(
-                icon,
-                color: iconColor,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    value,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -393,31 +336,31 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
               subtitle: 'Podstawowe informacje o tym profilu.',
             ),
             const SizedBox(height: 12),
-            buildInfoRow(
+            InfoRow(
               icon: Icons.badge,
               label: 'ID użytkownika',
               value: widget.user.id.toString(),
             ),
             const Divider(),
-            buildInfoRow(
+            InfoRow(
               icon: Icons.email,
               label: 'Email',
               value: widget.user.email,
             ),
             const Divider(),
-            buildInfoRow(
+            InfoRow(
               icon: Icons.person,
               label: 'Nazwa',
               value: widget.user.username,
             ),
             const Divider(),
-            buildInfoRow(
+            InfoRow(
               icon: Icons.location_city,
               label: 'Miasto',
               value: buildCityText(),
             ),
             const Divider(),
-            buildInfoRow(
+            InfoRow(
               icon: Icons.cake,
               label: 'Wiek',
               value: buildAgeText(),
@@ -510,41 +453,6 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
         label: isRemovingFriend
             ? const Text('Usuwanie...')
             : const Text('Usuń znajomego'),
-      ),
-    );
-  }
-
-  Widget buildInfoRow({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
-        children: [
-          Icon(icon),
-          const SizedBox(width: 12),
-          SizedBox(
-            width: 130,
-            child: Text(
-              label,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              value,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
       ),
     );
   }

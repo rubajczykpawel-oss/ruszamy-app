@@ -7,8 +7,10 @@ import '../config/api_config.dart';
 import '../models/user_profile.dart';
 import '../services/auth_api_service.dart';
 import '../widgets/info_chip.dart';
+import '../widgets/info_row.dart';
 import '../widgets/message_card.dart';
 import '../widgets/section_header.dart';
+import '../widgets/stat_card.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String token;
@@ -436,7 +438,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             SizedBox(
               width: cardWidth,
-              child: buildStatCard(
+              child: StatCard(
                 icon: Icons.person,
                 value: profile.username,
                 title: 'Nazwa',
@@ -447,7 +449,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             SizedBox(
               width: cardWidth,
-              child: buildStatCard(
+              child: StatCard(
                 icon: Icons.location_city,
                 value: profile.city ?? '-',
                 title: 'Miasto',
@@ -458,7 +460,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             SizedBox(
               width: cardWidth,
-              child: buildStatCard(
+              child: StatCard(
                 icon: Icons.cake,
                 value: profile.age?.toString() ?? '-',
                 title: 'Wiek',
@@ -470,65 +472,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         );
       },
-    );
-  }
-
-  Widget buildStatCard({
-    required IconData icon,
-    required String value,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required Color iconColor,
-  }) {
-    return Card(
-      color: color,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            CircleAvatar(
-              backgroundColor: Colors.white,
-              child: Icon(
-                icon,
-                color: iconColor,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    value,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -545,31 +488,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
               subtitle: 'Podstawowe dane widoczne w aplikacji.',
             ),
             const SizedBox(height: 12),
-            buildInfoRow(
+            InfoRow(
               icon: Icons.badge,
               label: 'ID użytkownika',
               value: profile.id.toString(),
             ),
             const Divider(),
-            buildInfoRow(
+            InfoRow(
               icon: Icons.email,
               label: 'Email',
               value: profile.email,
             ),
             const Divider(),
-            buildInfoRow(
+            InfoRow(
               icon: Icons.person,
               label: 'Nazwa',
               value: profile.username,
             ),
             const Divider(),
-            buildInfoRow(
+            InfoRow(
               icon: Icons.location_city,
               label: 'Miasto',
               value: buildCityText(profile),
             ),
             const Divider(),
-            buildInfoRow(
+            InfoRow(
               icon: Icons.cake,
               label: 'Wiek',
               value: buildAgeText(profile),
@@ -656,41 +599,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget buildInfoRow({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
-        children: [
-          Icon(icon),
-          const SizedBox(width: 12),
-          SizedBox(
-            width: 130,
-            child: Text(
-              label,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              value,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
       ),
     );
   }

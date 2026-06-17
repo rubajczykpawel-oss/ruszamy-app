@@ -6,6 +6,7 @@ import '../widgets/empty_state_card.dart';
 import '../widgets/event_card.dart';
 import '../widgets/message_card.dart';
 import '../widgets/section_header.dart';
+import '../widgets/stat_card.dart';
 import 'create_event_screen.dart';
 import 'event_details_screen.dart';
 
@@ -282,7 +283,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
           children: [
             SizedBox(
               width: cardWidth,
-              child: buildStatCard(
+              child: StatCard(
                 icon: Icons.event,
                 value: countJoinedEvents().toString(),
                 title: 'Wszystkie',
@@ -293,7 +294,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
             ),
             SizedBox(
               width: cardWidth,
-              child: buildStatCard(
+              child: StatCard(
                 icon: Icons.person,
                 value: countCreatedEvents().toString(),
                 title: 'Powiązane z Tobą',
@@ -304,7 +305,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
             ),
             SizedBox(
               width: cardWidth,
-              child: buildStatCard(
+              child: StatCard(
                 icon: Icons.check_circle,
                 value: countAvailableEvents().toString(),
                 title: 'Z miejscami',
@@ -315,7 +316,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
             ),
             SizedBox(
               width: cardWidth,
-              child: buildStatCard(
+              child: StatCard(
                 icon: Icons.block,
                 value: countFullEvents().toString(),
                 title: 'Pełne',
@@ -327,65 +328,6 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
           ],
         );
       },
-    );
-  }
-
-  Widget buildStatCard({
-    required IconData icon,
-    required String value,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required Color iconColor,
-  }) {
-    return Card(
-      color: color,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            CircleAvatar(
-              backgroundColor: Colors.white,
-              child: Icon(
-                icon,
-                color: iconColor,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    value,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 

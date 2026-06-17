@@ -6,6 +6,7 @@ import '../widgets/empty_state_card.dart';
 import '../widgets/group_card.dart';
 import '../widgets/message_card.dart';
 import '../widgets/section_header.dart';
+import '../widgets/stat_card.dart';
 import 'create_group_screen.dart';
 import 'group_details_screen.dart';
 
@@ -312,7 +313,7 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
           children: [
             SizedBox(
               width: cardWidth,
-              child: buildStatCard(
+              child: StatCard(
                 icon: Icons.groups,
                 value: countGroups().toString(),
                 title: 'Wszystkie',
@@ -323,7 +324,7 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
             ),
             SizedBox(
               width: cardWidth,
-              child: buildStatCard(
+              child: StatCard(
                 icon: Icons.location_city,
                 value: countDifferentCities().toString(),
                 title: 'Miasta',
@@ -334,7 +335,7 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
             ),
             SizedBox(
               width: cardWidth,
-              child: buildStatCard(
+              child: StatCard(
                 icon: Icons.directions_walk,
                 value: countDifferentActivityTypes().toString(),
                 title: 'Aktywności',
@@ -345,7 +346,7 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
             ),
             SizedBox(
               width: cardWidth,
-              child: buildStatCard(
+              child: StatCard(
                 icon: Icons.calendar_month,
                 value: getNewestGroupDate(),
                 title: 'Najnowsza',
@@ -357,65 +358,6 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
           ],
         );
       },
-    );
-  }
-
-  Widget buildStatCard({
-    required IconData icon,
-    required String value,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required Color iconColor,
-  }) {
-    return Card(
-      color: color,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            CircleAvatar(
-              backgroundColor: Colors.white,
-              child: Icon(
-                icon,
-                color: iconColor,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    value,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
