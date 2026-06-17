@@ -50,6 +50,7 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
   @override
   void initState() {
     super.initState();
+
     loadGroupData();
   }
 
@@ -104,6 +105,40 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
         });
       }
     }
+  }
+
+  bool isCurrentUserOwner(AppGroup group) {
+    final UserProfile? user = currentUser;
+
+    if (user == null) {
+      return false;
+    }
+
+    return group.ownerId == user.id;
+  }
+
+  bool isCurrentUserMember() {
+    final UserProfile? user = currentUser;
+
+    if (user == null) {
+      return false;
+    }
+
+    return members.any((member) {
+      return member.userId == user.id;
+    });
+  }
+
+  bool isFriendAlreadyInGroup(UserProfile friend) {
+    return members.any((member) {
+      return member.userId == friend.id;
+    });
+  }
+
+  List<UserProfile> getFriendsNotInGroup() {
+    return friends.where((friend) {
+      return !isFriendAlreadyInGroup(friend);
+    }).toList();
   }
 
   Future<void> openEditGroup(AppGroup groupToEdit) async {
@@ -350,22 +385,6 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
     }
   }
 
-  bool isFriendAlreadyInGroup(UserProfile friend) {
-    return members.any((member) {
-      return member.userId == friend.id;
-    });
-  }
-
-  bool isCurrentUserOwner(AppGroup group) {
-    final UserProfile? user = currentUser;
-
-    if (user == null) {
-      return false;
-    }
-
-    return group.ownerId == user.id;
-  }
-
   @override
   Widget build(BuildContext context) {
     final AppGroup? currentGroup = group;
@@ -411,6 +430,9 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
   }
 
   Widget buildGroupDetails(AppGroup group) {
+    final bool currentUserIsOwner = isCurrentUserOwner(group);
+    final bool currentUserIsMember = isCurrentUserMember();
+
     return RefreshIndicator(
       onRefresh: () {
         return loadGroupData();
@@ -418,252 +440,552 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text(
-            group.name,
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            group.description,
-            style: const TextStyle(fontSize: 16),
-          ),
-          const SizedBox(height: 20),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              InfoChip(
-                icon: Icons.location_city,
-                label: group.city,
-              ),
-              InfoChip(
-                icon: Icons.directions_walk,
-                label: group.activityType,
-              ),
-              InfoChip(
-                icon: Icons.person,
-                label: 'Owner ID: ${group.ownerId}',
-              ),
-              InfoChip(
-                icon: Icons.calendar_month,
-                label: group.createdAt,
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          buildGroupActionsCard(group),
+          buildHeroCard(group),
           const SizedBox(height: 16),
-          buildLeaveGroupCard(group),
-          const SizedBox(height: 24),
-          buildAddFriendsCard(),
-          const SizedBox(height: 24),
-          if (errorMessage.isNotEmpty)
-            Card(
-              color: Colors.red.shade50,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  errorMessage,
-                  style: const TextStyle(color: Colors.red),
-                ),
-              ),
-            ),
-          if (successMessage.isNotEmpty)
-            Card(
-              color: Colors.green.shade50,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  successMessage,
-                  style: const TextStyle(color: Colors.green),
-                ),
-              ),
-            ),
-          const SizedBox(height: 12),
-          const Text(
-            'Członkowie grupy',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
+          buildMessages(),
+          buildStatsCard(group),
+          const SizedBox(height: 16),
+          buildDescriptionCard(group),
+          const SizedBox(height: 16),
+          buildMembersCard(
+            group: group,
+            currentUserIsOwner: currentUserIsOwner,
           ),
-          const SizedBox(height: 12),
-          if (members.isEmpty)
-            const Card(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: Text('Ta grupa nie ma jeszcze członków.'),
-              ),
-            )
-          else
-            ...members.map((member) {
-              return buildMemberCard(member);
-            }),
+          const SizedBox(height: 16),
+          buildAddFriendsCard(
+            currentUserIsOwner: currentUserIsOwner,
+          ),
+          const SizedBox(height: 16),
+          buildLeaveGroupCard(
+            group: group,
+            currentUserIsOwner: currentUserIsOwner,
+            currentUserIsMember: currentUserIsMember,
+          ),
+          if (currentUserIsOwner) const SizedBox(height: 16),
+          if (currentUserIsOwner)
+            buildOwnerActionsCard(
+              group: group,
+            ),
         ],
       ),
     );
   }
 
-  Widget buildGroupActionsCard(AppGroup group) {
+  Widget buildHeroCard(AppGroup group) {
     return Card(
       color: Colors.orange.shade50,
       child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final bool isNarrow = constraints.maxWidth < 560;
+
+            if (isNarrow) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  buildHeroIcon(),
+                  const SizedBox(height: 16),
+                  buildHeroText(group),
+                ],
+              );
+            }
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                buildHeroIcon(),
+                const SizedBox(width: 18),
+                Expanded(
+                  child: buildHeroText(group),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget buildHeroIcon() {
+    return CircleAvatar(
+      radius: 42,
+      backgroundColor: Colors.orange.shade100,
+      child: const Icon(
+        Icons.groups,
+        size: 44,
+      ),
+    );
+  }
+
+  Widget buildHeroText(AppGroup group) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          group.name,
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 30,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            InfoChip(
+              icon: Icons.location_city,
+              label: group.city,
+            ),
+            InfoChip(
+              icon: Icons.directions_walk,
+              label: group.activityType,
+            ),
+            InfoChip(
+              icon: Icons.person,
+              label: 'Owner: ${group.ownerId}',
+            ),
+            InfoChip(
+              icon: Icons.calendar_month,
+              label: buildShortDate(group.createdAt),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget buildMessages() {
+    if (errorMessage.isEmpty && successMessage.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      children: [
+        if (errorMessage.isNotEmpty)
+          Card(
+            color: Colors.red.shade50,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.error,
+                    color: Colors.red,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      errorMessage,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        if (successMessage.isNotEmpty)
+          Card(
+            color: Colors.green.shade50,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.check_circle,
+                    color: Colors.green,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      successMessage,
+                      style: const TextStyle(color: Colors.green),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget buildStatsCard(AppGroup group) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double cardWidth;
+
+        if (constraints.maxWidth >= 760) {
+          cardWidth = (constraints.maxWidth - 24) / 3;
+        } else {
+          cardWidth = constraints.maxWidth;
+        }
+
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            SizedBox(
+              width: cardWidth,
+              child: buildStatCard(
+                icon: Icons.people,
+                value: members.length.toString(),
+                title: 'Członkowie',
+                subtitle: 'Osoby w grupie',
+                color: Colors.blue.shade50,
+                iconColor: Colors.blue,
+              ),
+            ),
+            SizedBox(
+              width: cardWidth,
+              child: buildStatCard(
+                icon: Icons.person_add,
+                value: getFriendsNotInGroup().length.toString(),
+                title: 'Do dodania',
+                subtitle: 'Znajomi poza grupą',
+                color: Colors.green.shade50,
+                iconColor: Colors.green,
+              ),
+            ),
+            SizedBox(
+              width: cardWidth,
+              child: buildStatCard(
+                icon: Icons.directions_walk,
+                value: group.activityType,
+                title: 'Aktywność',
+                subtitle: group.city,
+                color: Colors.orange.shade50,
+                iconColor: Colors.orange,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget buildStatCard({
+    required IconData icon,
+    required String value,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required Color iconColor,
+  }) {
+    return Card(
+      color: color,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: Colors.white,
+              child: Icon(
+                icon,
+                color: iconColor,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildDescriptionCard(AppGroup group) {
+    return Card(
+      color: Colors.grey.shade50,
+      child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Row(
               children: [
-                Icon(
-                  Icons.settings,
-                  size: 32,
-                  color: Colors.orange,
-                ),
-                SizedBox(width: 16),
+                Icon(Icons.description),
+                SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Zarządzanie grupą',
+                    'Opis grupy',
                     style: TextStyle(
-                      fontSize: 20,
+                      fontSize: 22,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            const Text(
-              'Edytuj dane grupy albo usuń grupę, jeśli jesteś jej właścicielem.',
+            const SizedBox(height: 12),
+            Text(
+              group.description.trim().isEmpty
+                  ? 'Brak opisu grupy.'
+                  : group.description,
+              style: const TextStyle(fontSize: 16),
             ),
-            const SizedBox(height: 16),
-            Row(
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildMembersCard({
+    required AppGroup group,
+    required bool currentUserIsOwner,
+  }) {
+    return Card(
+      color: Colors.blue.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            buildSectionHeader(
+              icon: Icons.people,
+              title: 'Członkowie grupy',
+              subtitle: 'Lista osób należących do tej grupy.',
+            ),
+            const SizedBox(height: 12),
+            if (members.isEmpty)
+              buildEmptyBox('Ta grupa nie ma jeszcze członków.')
+            else
+              ...members.map((member) {
+                return buildMemberCard(
+                  member: member,
+                  currentUserIsOwner: currentUserIsOwner,
+                );
+              }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildMemberCard({
+    required GroupMember member,
+    required bool currentUserIsOwner,
+  }) {
+    final String cityText = member.user.city ?? 'Brak miasta';
+    final String ageText = member.user.age == null
+        ? 'Brak wieku'
+        : '${member.user.age} lat';
+
+    final bool memberIsOwner = member.role == 'owner';
+    final bool isCurrentMemberRemoving = removingUserId == member.userId;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final bool isNarrow = constraints.maxWidth < 560;
+
+            if (isNarrow) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  buildMemberInfo(
+                    member: member,
+                    cityText: cityText,
+                    ageText: ageText,
+                  ),
+                  const SizedBox(height: 12),
+                  buildRemoveMemberButton(
+                    member: member,
+                    memberIsOwner: memberIsOwner,
+                    currentUserIsOwner: currentUserIsOwner,
+                    isCurrentMemberRemoving: isCurrentMemberRemoving,
+                  ),
+                ],
+              );
+            }
+
+            return Row(
               children: [
                 Expanded(
-                  child: FilledButton.icon(
-                    onPressed: isDeletingGroup || isLeavingGroup
-                        ? null
-                        : () {
-                            openEditGroup(group);
-                          },
-                    icon: const Icon(Icons.edit),
-                    label: const Text('Edytuj'),
+                  child: buildMemberInfo(
+                    member: member,
+                    cityText: cityText,
+                    ageText: ageText,
                   ),
                 ),
                 const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: isDeletingGroup || isLeavingGroup
-                        ? null
-                        : () {
-                            confirmDeleteGroup(group);
-                          },
-                    icon: const Icon(Icons.delete),
-                    label: isDeletingGroup
-                        ? const Text('Usuwanie...')
-                        : const Text('Usuń'),
+                SizedBox(
+                  width: 170,
+                  child: buildRemoveMemberButton(
+                    member: member,
+                    memberIsOwner: memberIsOwner,
+                    currentUserIsOwner: currentUserIsOwner,
+                    isCurrentMemberRemoving: isCurrentMemberRemoving,
                   ),
                 ),
               ],
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget buildLeaveGroupCard(AppGroup group) {
-    final bool currentUserIsOwner = isCurrentUserOwner(group);
-
-    return Card(
-      color: Colors.red.shade50,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
-              children: [
-                Icon(
-                  Icons.logout,
-                  size: 32,
-                  color: Colors.red,
-                ),
-                SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    'Opuść grupę',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              currentUserIsOwner
-                  ? 'Jesteś właścicielem grupy. Właściciel powinien usunąć grupę albo przekazać ją komuś innemu w przyszłej funkcji.'
-                  : 'Jeśli nie chcesz już należeć do tej grupy, możesz ją opuścić.',
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 44,
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: currentUserIsOwner || isLeavingGroup
-                    ? null
-                    : () {
-                        confirmLeaveGroup(group);
-                      },
-                icon: const Icon(Icons.logout),
-                label: currentUserIsOwner
-                    ? const Text('Właściciel nie może opuścić')
-                    : isLeavingGroup
-                        ? const Text('Opuszczanie...')
-                        : const Text('Opuść grupę'),
-              ),
-            ),
-          ],
+  Widget buildMemberInfo({
+    required GroupMember member,
+    required String cityText,
+    required String ageText,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const CircleAvatar(
+          radius: 28,
+          child: Icon(Icons.person),
         ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                member.user.username,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                member.user.email,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  InfoChip(
+                    icon: Icons.badge,
+                    label: member.role,
+                  ),
+                  InfoChip(
+                    icon: Icons.location_city,
+                    label: cityText,
+                  ),
+                  InfoChip(
+                    icon: Icons.cake,
+                    label: ageText,
+                  ),
+                  InfoChip(
+                    icon: Icons.person,
+                    label: 'ID: ${member.userId}',
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget buildRemoveMemberButton({
+    required GroupMember member,
+    required bool memberIsOwner,
+    required bool currentUserIsOwner,
+    required bool isCurrentMemberRemoving,
+  }) {
+    final bool buttonDisabled =
+        memberIsOwner || !currentUserIsOwner || isRemovingMember;
+
+    String label = 'Usuń';
+
+    if (memberIsOwner) {
+      label = 'Właściciel';
+    } else if (!currentUserIsOwner) {
+      label = 'Tylko owner';
+    } else if (isCurrentMemberRemoving) {
+      label = 'Usuwanie...';
+    }
+
+    return SizedBox(
+      height: 44,
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: buttonDisabled
+            ? null
+            : () {
+                confirmRemoveMember(member);
+              },
+        icon: const Icon(Icons.person_remove),
+        label: Text(label),
       ),
     );
   }
 
-  Widget buildAddFriendsCard() {
+  Widget buildAddFriendsCard({
+    required bool currentUserIsOwner,
+  }) {
+    final List<UserProfile> friendsNotInGroup = getFriendsNotInGroup();
+
     return Card(
-      color: Colors.teal.shade50,
+      color: Colors.green.shade50,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Dodaj znajomego do grupy',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+            buildSectionHeader(
+              icon: Icons.person_add,
+              title: 'Dodaj znajomego',
+              subtitle:
+                  'Wybierz znajomego z listy i dodaj go do tej grupy.',
             ),
-            const SizedBox(height: 8),
-            const Text(
-              'Wybierz znajomego z listy. Nie musisz już wpisywać ID ręcznie.',
-            ),
-            const SizedBox(height: 16),
-            if (friends.isEmpty)
-              const Card(
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text(
-                    'Nie masz jeszcze znajomych do dodania. Najpierw dodaj znajomego i zaakceptuj zaproszenie.',
-                  ),
-                ),
+            const SizedBox(height: 12),
+            if (!currentUserIsOwner)
+              buildEmptyBox(
+                'Tylko właściciel grupy może dodawać nowych członków.',
+              )
+            else if (friendsNotInGroup.isEmpty)
+              buildEmptyBox(
+                'Nie masz znajomych do dodania albo wszyscy są już w tej grupie.',
               )
             else
-              ...friends.map((friend) {
+              ...friendsNotInGroup.map((friend) {
                 return buildFriendToAddCard(friend);
               }),
           ],
@@ -673,7 +995,6 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
   }
 
   Widget buildFriendToAddCard(UserProfile friend) {
-    final bool alreadyInGroup = isFriendAlreadyInGroup(friend);
     final bool isCurrentFriendLoading = addingUserId == friend.id;
 
     final String cityText = friend.city ?? 'Brak miasta';
@@ -683,135 +1004,431 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            const CircleAvatar(
-              radius: 24,
-              child: Icon(Icons.person),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
+        padding: const EdgeInsets.all(14),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final bool isNarrow = constraints.maxWidth < 560;
+
+            if (isNarrow) {
+              return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    friend.username,
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  buildFriendToAddInfo(
+                    friend: friend,
+                    cityText: cityText,
+                    ageText: ageText,
                   ),
-                  Text(friend.email),
-                  const SizedBox(height: 4),
-                  Text('Miasto: $cityText'),
-                  Text('Wiek: $ageText'),
-                  Text('ID: ${friend.id}'),
+                  const SizedBox(height: 12),
+                  buildAddFriendButton(
+                    friend: friend,
+                    isCurrentFriendLoading: isCurrentFriendLoading,
+                  ),
                 ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            FilledButton(
-              onPressed: alreadyInGroup || isAddingMember
-                  ? null
-                  : () {
-                      addMemberToGroup(friend);
-                    },
-              child: alreadyInGroup
-                  ? const Text('Już w grupie')
-                  : isCurrentFriendLoading
-                      ? const Text('Dodaję...')
-                      : const Text('Dodaj'),
-            ),
-          ],
+              );
+            }
+
+            return Row(
+              children: [
+                Expanded(
+                  child: buildFriendToAddInfo(
+                    friend: friend,
+                    cityText: cityText,
+                    ageText: ageText,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                SizedBox(
+                  width: 140,
+                  child: buildAddFriendButton(
+                    friend: friend,
+                    isCurrentFriendLoading: isCurrentFriendLoading,
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget buildMemberCard(GroupMember member) {
-    final String cityText = member.user.city ?? 'Brak miasta';
-    final String ageText = member.user.age == null
-        ? 'Brak wieku'
-        : '${member.user.age} lat';
+  Widget buildFriendToAddInfo({
+    required UserProfile friend,
+    required String cityText,
+    required String ageText,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const CircleAvatar(
+          radius: 26,
+          child: Icon(Icons.person),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                friend.username,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                friend.email,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  InfoChip(
+                    icon: Icons.location_city,
+                    label: cityText,
+                  ),
+                  InfoChip(
+                    icon: Icons.cake,
+                    label: ageText,
+                  ),
+                  InfoChip(
+                    icon: Icons.person,
+                    label: 'ID: ${friend.id}',
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 
-    final bool isOwner = member.role == 'owner';
-    final bool isCurrentMemberRemoving = removingUserId == member.userId;
+  Widget buildAddFriendButton({
+    required UserProfile friend,
+    required bool isCurrentFriendLoading,
+  }) {
+    return SizedBox(
+      height: 44,
+      width: double.infinity,
+      child: FilledButton.icon(
+        onPressed: isAddingMember
+            ? null
+            : () {
+                addMemberToGroup(friend);
+              },
+        icon: const Icon(Icons.person_add),
+        label: isCurrentFriendLoading
+            ? const Text('Dodaję...')
+            : const Text('Dodaj'),
+      ),
+    );
+  }
 
+  Widget buildLeaveGroupCard({
+    required AppGroup group,
+    required bool currentUserIsOwner,
+    required bool currentUserIsMember,
+  }) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      color: Colors.red.shade50,
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final bool isNarrow = constraints.maxWidth < 560;
+
+            if (isNarrow) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  buildLeaveGroupText(
+                    currentUserIsOwner: currentUserIsOwner,
+                    currentUserIsMember: currentUserIsMember,
+                  ),
+                  const SizedBox(height: 16),
+                  buildLeaveGroupButton(
+                    group: group,
+                    currentUserIsOwner: currentUserIsOwner,
+                    currentUserIsMember: currentUserIsMember,
+                  ),
+                ],
+              );
+            }
+
+            return Row(
               children: [
-                const CircleAvatar(
-                  radius: 28,
-                  child: Icon(Icons.person),
+                Expanded(
+                  child: buildLeaveGroupText(
+                    currentUserIsOwner: currentUserIsOwner,
+                    currentUserIsMember: currentUserIsMember,
+                  ),
                 ),
                 const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        member.user.username,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(member.user.email),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          InfoChip(
-                            icon: Icons.badge,
-                            label: member.role,
-                          ),
-                          InfoChip(
-                            icon: Icons.location_city,
-                            label: cityText,
-                          ),
-                          InfoChip(
-                            icon: Icons.cake,
-                            label: ageText,
-                          ),
-                          InfoChip(
-                            icon: Icons.person,
-                            label: 'ID: ${member.userId}',
-                          ),
-                        ],
-                      ),
-                    ],
+                SizedBox(
+                  width: 220,
+                  child: buildLeaveGroupButton(
+                    group: group,
+                    currentUserIsOwner: currentUserIsOwner,
+                    currentUserIsMember: currentUserIsMember,
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 44,
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: isOwner || isRemovingMember
-                    ? null
-                    : () {
-                        confirmRemoveMember(member);
-                      },
-                icon: const Icon(Icons.person_remove),
-                label: isOwner
-                    ? const Text('Właściciel grupy')
-                    : isCurrentMemberRemoving
-                        ? const Text('Usuwanie...')
-                        : const Text('Usuń z grupy'),
-              ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
+  }
+
+  Widget buildLeaveGroupText({
+    required bool currentUserIsOwner,
+    required bool currentUserIsMember,
+  }) {
+    String title;
+    String description;
+
+    if (currentUserIsOwner) {
+      title = 'Jesteś właścicielem grupy';
+      description =
+          'Właściciel nie powinien opuszczać grupy. Możesz ją edytować albo usunąć.';
+    } else if (!currentUserIsMember) {
+      title = 'Nie jesteś członkiem tej grupy';
+      description = 'Nie możesz opuścić grupy, do której nie należysz.';
+    } else {
+      title = 'Opuść grupę';
+      description = 'Możesz opuścić grupę, jeśli nie chcesz już do niej należeć.';
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(
+          Icons.logout,
+          size: 34,
+          color: Colors.red,
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 21,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(description),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget buildLeaveGroupButton({
+    required AppGroup group,
+    required bool currentUserIsOwner,
+    required bool currentUserIsMember,
+  }) {
+    final bool buttonDisabled =
+        currentUserIsOwner || !currentUserIsMember || isLeavingGroup;
+
+    String label = 'Opuść grupę';
+
+    if (currentUserIsOwner) {
+      label = 'Owner nie opuszcza';
+    } else if (!currentUserIsMember) {
+      label = 'Nie jesteś członkiem';
+    } else if (isLeavingGroup) {
+      label = 'Opuszczanie...';
+    }
+
+    return SizedBox(
+      height: 44,
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: buttonDisabled
+            ? null
+            : () {
+                confirmLeaveGroup(group);
+              },
+        icon: const Icon(Icons.logout),
+        label: Text(label),
+      ),
+    );
+  }
+
+  Widget buildOwnerActionsCard({
+    required AppGroup group,
+  }) {
+    return Card(
+      color: Colors.orange.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final bool isNarrow = constraints.maxWidth < 560;
+
+            if (isNarrow) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  buildOwnerActionsText(),
+                  const SizedBox(height: 16),
+                  buildOwnerActionsButtons(group),
+                ],
+              );
+            }
+
+            return Row(
+              children: [
+                Expanded(
+                  child: buildOwnerActionsText(),
+                ),
+                const SizedBox(width: 16),
+                SizedBox(
+                  width: 260,
+                  child: buildOwnerActionsButtons(group),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget buildOwnerActionsText() {
+    return const Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          Icons.settings,
+          size: 34,
+          color: Colors.orange,
+        ),
+        SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Zarządzanie grupą',
+                style: TextStyle(
+                  fontSize: 21,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 6),
+              Text(
+                'Jako właściciel możesz edytować albo usunąć tę grupę.',
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget buildOwnerActionsButtons(AppGroup group) {
+    return Column(
+      children: [
+        SizedBox(
+          height: 44,
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: isDeletingGroup || isLeavingGroup
+                ? null
+                : () {
+                    openEditGroup(group);
+                  },
+            icon: const Icon(Icons.edit),
+            label: const Text('Edytuj'),
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 44,
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: isDeletingGroup || isLeavingGroup
+                ? null
+                : () {
+                    confirmDeleteGroup(group);
+                  },
+            icon: const Icon(Icons.delete),
+            label: isDeletingGroup
+                ? const Text('Usuwanie...')
+                : const Text('Usuń'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget buildSectionHeader({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          icon,
+          size: 32,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(subtitle),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget buildEmptyBox(String text) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(text),
+    );
+  }
+
+  String buildShortDate(String value) {
+    if (value.length >= 10) {
+      return value.substring(0, 10);
+    }
+
+    return value;
   }
 }

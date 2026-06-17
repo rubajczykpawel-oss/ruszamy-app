@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/app_event.dart';
 import '../services/events_api_service.dart';
 import '../widgets/event_card.dart';
+import 'create_event_screen.dart';
 import 'event_details_screen.dart';
 
 class MyEventsScreen extends StatefulWidget {
@@ -25,7 +26,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
   bool isLoading = true;
   String errorMessage = '';
 
-  List<AppEvent> events = [];
+  List<AppEvent> myEvents = [];
 
   @override
   void initState() {
@@ -46,7 +47,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
       );
 
       setState(() {
-        events = loadedEvents;
+        myEvents = loadedEvents;
       });
     } catch (error) {
       setState(() {
@@ -59,6 +60,21 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
         });
       }
     }
+  }
+
+  Future<void> openCreateEvent() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) {
+          return CreateEventScreen(
+            token: widget.token,
+          );
+        },
+      ),
+    );
+
+    loadMyEvents();
   }
 
   Future<void> openEventDetails(AppEvent event) async {
@@ -77,6 +93,28 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
     loadMyEvents();
   }
 
+  int countJoinedEvents() {
+    return myEvents.length;
+  }
+
+  int countCreatedEvents() {
+    return myEvents.where((event) {
+      return event.creatorId > 0;
+    }).length;
+  }
+
+  int countFullEvents() {
+    return myEvents.where((event) {
+      return event.participantsCount >= event.maxParticipants;
+    }).length;
+  }
+
+  int countAvailableEvents() {
+    return myEvents.where((event) {
+      return event.participantsCount < event.maxParticipants;
+    }).length;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -90,6 +128,11 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: openCreateEvent,
+        icon: const Icon(Icons.add),
+        label: const Text('Dodaj event'),
+      ),
       body: isLoading
           ? const Center(
               child: CircularProgressIndicator(),
@@ -99,46 +142,345 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  const Text(
-                    'Eventy, do których jesteś zapisany',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  if (errorMessage.isNotEmpty)
-                    Card(
-                      color: Colors.red.shade50,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Text(
-                          errorMessage,
-                          style: const TextStyle(color: Colors.red),
-                        ),
-                      ),
-                    ),
-                  if (events.isEmpty)
-                    const Card(
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Text(
-                          'Nie jesteś jeszcze zapisany na żadne wydarzenie.',
-                        ),
-                      ),
-                    )
+                  buildHeaderCard(),
+                  const SizedBox(height: 16),
+                  buildStatsGrid(),
+                  const SizedBox(height: 16),
+                  if (errorMessage.isNotEmpty) buildErrorCard(),
+                  if (myEvents.isEmpty)
+                    buildEmptyState()
                   else
-                    ...events.map((event) {
-                      return EventCard(
-                        event: event,
-                        onTap: () {
-                          openEventDetails(event);
-                        },
-                      );
-                    }),
+                    buildEventsSection(),
+                  const SizedBox(height: 80),
                 ],
               ),
             ),
+    );
+  }
+
+  Widget buildHeaderCard() {
+    return Card(
+      color: Colors.green.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final bool isNarrow = constraints.maxWidth < 560;
+
+            if (isNarrow) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  buildHeaderIcon(),
+                  const SizedBox(height: 16),
+                  buildHeaderText(),
+                  const SizedBox(height: 16),
+                  buildHeaderButton(),
+                ],
+              );
+            }
+
+            return Row(
+              children: [
+                buildHeaderIcon(),
+                const SizedBox(width: 18),
+                Expanded(
+                  child: buildHeaderText(),
+                ),
+                const SizedBox(width: 16),
+                SizedBox(
+                  width: 170,
+                  child: buildHeaderButton(),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget buildHeaderIcon() {
+    return CircleAvatar(
+      radius: 42,
+      backgroundColor: Colors.green.shade100,
+      child: const Icon(
+        Icons.event_available,
+        size: 44,
+      ),
+    );
+  }
+
+  Widget buildHeaderText() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Moje wydarzenia',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 30,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Tutaj widzisz wydarzenia, do których jesteś zapisany albo które utworzyłeś.',
+          style: TextStyle(
+            fontSize: 15,
+            color: Colors.grey.shade800,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget buildHeaderButton() {
+    return SizedBox(
+      height: 44,
+      width: double.infinity,
+      child: FilledButton.icon(
+        onPressed: openCreateEvent,
+        icon: const Icon(Icons.add),
+        label: const Text('Dodaj'),
+      ),
+    );
+  }
+
+  Widget buildStatsGrid() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double cardWidth;
+
+        if (constraints.maxWidth >= 900) {
+          cardWidth = (constraints.maxWidth - 36) / 4;
+        } else if (constraints.maxWidth >= 650) {
+          cardWidth = (constraints.maxWidth - 12) / 2;
+        } else {
+          cardWidth = constraints.maxWidth;
+        }
+
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            SizedBox(
+              width: cardWidth,
+              child: buildStatCard(
+                icon: Icons.event,
+                value: countJoinedEvents().toString(),
+                title: 'Wszystkie',
+                subtitle: 'Twoje wydarzenia',
+                color: Colors.blue.shade50,
+                iconColor: Colors.blue,
+              ),
+            ),
+            SizedBox(
+              width: cardWidth,
+              child: buildStatCard(
+                icon: Icons.person,
+                value: countCreatedEvents().toString(),
+                title: 'Powiązane z Tobą',
+                subtitle: 'Eventy na Twojej liście',
+                color: Colors.green.shade50,
+                iconColor: Colors.green,
+              ),
+            ),
+            SizedBox(
+              width: cardWidth,
+              child: buildStatCard(
+                icon: Icons.check_circle,
+                value: countAvailableEvents().toString(),
+                title: 'Z miejscami',
+                subtitle: 'Można jeszcze dołączyć',
+                color: Colors.orange.shade50,
+                iconColor: Colors.orange,
+              ),
+            ),
+            SizedBox(
+              width: cardWidth,
+              child: buildStatCard(
+                icon: Icons.block,
+                value: countFullEvents().toString(),
+                title: 'Pełne',
+                subtitle: 'Brak wolnych miejsc',
+                color: Colors.red.shade50,
+                iconColor: Colors.red,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget buildStatCard({
+    required IconData icon,
+    required String value,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required Color iconColor,
+  }) {
+    return Card(
+      color: color,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: Colors.white,
+              child: Icon(
+                icon,
+                color: iconColor,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildErrorCard() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Card(
+        color: Colors.red.shade50,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.error,
+                color: Colors.red,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  errorMessage,
+                  style: const TextStyle(color: Colors.red),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget buildEmptyState() {
+    return Card(
+      color: Colors.grey.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            Icon(
+              Icons.event_busy,
+              size: 70,
+              color: Colors.grey.shade600,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Nie masz jeszcze żadnych wydarzeń',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Utwórz własne wydarzenie albo dołącz do istniejącego wydarzenia publicznego.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.grey.shade800,
+              ),
+            ),
+            const SizedBox(height: 18),
+            SizedBox(
+              height: 44,
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: openCreateEvent,
+                icon: const Icon(Icons.add),
+                label: const Text('Dodaj pierwsze wydarzenie'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildEventsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        buildSectionTitle(),
+        const SizedBox(height: 12),
+        ...myEvents.map((event) {
+          return EventCard(
+            event: event,
+            onTap: () {
+              openEventDetails(event);
+            },
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget buildSectionTitle() {
+    return Row(
+      children: [
+        const Icon(Icons.list_alt),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            'Lista wydarzeń (${myEvents.length})',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
