@@ -624,14 +624,33 @@ class _HomeScreenState extends State<HomeScreen> {
           if (showMobileNavigationCards) const SizedBox(height: 12),
           if (showMobileNavigationCards) buildNavigationCardsForMobile(),
           if (showMobileNavigationCards) const SizedBox(height: 16),
+          buildDashboardHeader(),
+          const SizedBox(height: 16),
+          buildStatsGrid(),
+          const SizedBox(height: 24),
           Container(
             key: publicEventsKey,
-            child: const Text(
-              'Publiczne wydarzenia',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+            child: Row(
+              children: [
+                const Icon(Icons.public),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Publiczne wydarzenia',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                if (events.isNotEmpty)
+                  Text(
+                    '${filteredEvents.length}/${events.length}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+              ],
             ),
           ),
           const SizedBox(height: 12),
@@ -680,6 +699,202 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             }),
         ],
+      ),
+    );
+  }
+
+  Widget buildDashboardHeader() {
+    final String username = profile?.username ?? 'użytkowniku';
+    final String cityText = profile?.city ?? 'nie ustawiono miasta';
+
+    return Card(
+      color: Colors.green.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 34,
+              backgroundColor: Colors.green.shade100,
+              child: const Icon(
+                Icons.directions_walk,
+                size: 38,
+              ),
+            ),
+            const SizedBox(width: 18),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Cześć, $username!',
+                    style: const TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Znajdź aktywność, dołącz do ludzi albo stwórz własne wydarzenie.',
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.location_city,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Twoje miasto: $cityText',
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            FilledButton.icon(
+              onPressed: openCreateEvent,
+              icon: const Icon(Icons.add),
+              label: const Text('Dodaj event'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildStatsGrid() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double cardWidth;
+
+        if (constraints.maxWidth >= 900) {
+          cardWidth = (constraints.maxWidth - 36) / 4;
+        } else if (constraints.maxWidth >= 650) {
+          cardWidth = (constraints.maxWidth - 12) / 2;
+        } else {
+          cardWidth = constraints.maxWidth;
+        }
+
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            SizedBox(
+              width: cardWidth,
+              child: buildStatCard(
+                icon: Icons.public,
+                value: events.length.toString(),
+                title: 'Publiczne eventy',
+                subtitle: 'Dostępne dla wszystkich',
+                color: Colors.blue.shade50,
+                iconColor: Colors.blue,
+                onTap: scrollToPublicEvents,
+              ),
+            ),
+            SizedBox(
+              width: cardWidth,
+              child: buildStatCard(
+                icon: Icons.event_available,
+                value: myEvents.length.toString(),
+                title: 'Moje eventy',
+                subtitle: 'Twoje zapisane wydarzenia',
+                color: Colors.green.shade50,
+                iconColor: Colors.green,
+                onTap: openMyEvents,
+              ),
+            ),
+            SizedBox(
+              width: cardWidth,
+              child: buildStatCard(
+                icon: Icons.people,
+                value: friends.length.toString(),
+                title: 'Znajomi',
+                subtitle: 'Twoja lista kontaktów',
+                color: Colors.indigo.shade50,
+                iconColor: Colors.indigo,
+                onTap: openFriendRequests,
+              ),
+            ),
+            SizedBox(
+              width: cardWidth,
+              child: buildStatCard(
+                icon: Icons.groups,
+                value: groups.length.toString(),
+                title: 'Grupy',
+                subtitle: 'Społeczności, w których jesteś',
+                color: Colors.orange.shade50,
+                iconColor: Colors.orange,
+                onTap: openMyGroups,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget buildStatCard({
+    required IconData icon,
+    required String value,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required Color iconColor,
+    required VoidCallback onTap,
+  }) {
+    return Card(
+      color: color,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: Colors.white,
+                child: Icon(
+                  icon,
+                  color: iconColor,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      value,
+                      style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
