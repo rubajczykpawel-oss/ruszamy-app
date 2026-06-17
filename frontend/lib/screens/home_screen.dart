@@ -709,64 +709,127 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Card(
       color: Colors.green.shade50,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 34,
-              backgroundColor: Colors.green.shade100,
-              child: const Icon(
-                Icons.directions_walk,
-                size: 38,
-              ),
-            ),
-            const SizedBox(width: 18),
-            Expanded(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final bool isNarrow = constraints.maxWidth < 620;
+
+          if (isNarrow) {
+            return Padding(
+              padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Cześć, $username!',
-                    style: const TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Znajdź aktywność, dołącz do ludzi albo stwórz własne wydarzenie.',
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: Colors.grey.shade800,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
-                        Icons.location_city,
-                        size: 18,
+                      CircleAvatar(
+                        radius: 34,
+                        backgroundColor: Colors.green.shade100,
+                        child: const Icon(
+                          Icons.directions_walk,
+                          size: 38,
+                        ),
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Twoje miasto: $cityText',
-                        style: const TextStyle(fontSize: 14),
+                      const SizedBox(width: 18),
+                      Expanded(
+                        child: buildDashboardHeaderText(
+                          username: username,
+                          cityText: cityText,
+                        ),
                       ),
                     ],
                   ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 44,
+                    child: FilledButton.icon(
+                      onPressed: openCreateEvent,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Dodaj event'),
+                    ),
+                  ),
                 ],
               ),
+            );
+          }
+
+          return Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 34,
+                  backgroundColor: Colors.green.shade100,
+                  child: const Icon(
+                    Icons.directions_walk,
+                    size: 38,
+                  ),
+                ),
+                const SizedBox(width: 18),
+                Expanded(
+                  child: buildDashboardHeaderText(
+                    username: username,
+                    cityText: cityText,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                FilledButton.icon(
+                  onPressed: openCreateEvent,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Dodaj event'),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            FilledButton.icon(
-              onPressed: openCreateEvent,
-              icon: const Icon(Icons.add),
-              label: const Text('Dodaj event'),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget buildDashboardHeaderText({
+    required String username,
+    required String cityText,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Cześć, $username!',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Znajdź aktywność, dołącz do ludzi albo stwórz własne wydarzenie.',
+          style: TextStyle(
+            fontSize: 15,
+            color: Colors.grey.shade800,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            const Icon(
+              Icons.location_city,
+              size: 18,
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                'Twoje miasto: $cityText',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 14),
+              ),
             ),
           ],
         ),
-      ),
+      ],
     );
   }
 
@@ -880,6 +943,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     Text(
                       title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                       ),
@@ -887,6 +952,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontSize: 12),
                     ),
                   ],
@@ -1215,9 +1282,15 @@ class _HomeScreenState extends State<HomeScreen> {
         leading: Icon(icon),
         title: Text(
           title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        subtitle: Text(subtitle),
+        subtitle: Text(
+          subtitle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         onTap: onTap,
       ),
     );
@@ -1273,7 +1346,11 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(title),
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
@@ -1308,16 +1385,23 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Text(
                     title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(subtitle),
+                  Text(
+                    subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ],
               ),
             ),
+            const SizedBox(width: 8),
             FilledButton(
               onPressed: onPressed,
               child: const Text('Otwórz'),
