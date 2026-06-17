@@ -49,9 +49,9 @@ class _HomeScreenState extends State<HomeScreen> {
   bool isLoadingFriends = true;
   bool isLoadingGroups = true;
 
-  bool isFriendsExpanded = true;
-  bool isEventsExpanded = true;
-  bool isGroupsExpanded = true;
+  bool isFriendsExpanded = false;
+  bool isEventsExpanded = false;
+  bool isGroupsExpanded = false;
 
   String errorMessage = '';
 
@@ -469,7 +469,7 @@ class _HomeScreenState extends State<HomeScreen> {
             )
           : LayoutBuilder(
               builder: (context, constraints) {
-                final bool useDesktopLayout = constraints.maxWidth >= 500;
+                final bool useDesktopLayout = constraints.maxWidth >= 900;
 
                 if (useDesktopLayout) {
                   return buildDesktopLayout();
@@ -637,6 +637,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 const Expanded(
                   child: Text(
                     'Publiczne wydarzenia',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -1129,6 +1131,8 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Text(
             title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 13,
@@ -1311,6 +1315,8 @@ class _HomeScreenState extends State<HomeScreen> {
         leading: Icon(icon),
         title: Text(
           title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
@@ -1369,45 +1375,98 @@ class _HomeScreenState extends State<HomeScreen> {
   }) {
     return Card(
       color: color,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 32,
-              color: iconColor,
-            ),
-            const SizedBox(width: 16),
-            Expanded(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final bool isNarrow = constraints.maxWidth < 520;
+
+          if (isNarrow) {
+            return Padding(
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    children: [
+                      Icon(
+                        icon,
+                        size: 32,
+                        color: iconColor,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 8),
                   Text(
                     subtitle,
-                    maxLines: 2,
+                    maxLines: 3,
                     overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 44,
+                    child: FilledButton(
+                      onPressed: onPressed,
+                      child: const Text('Otwórz'),
+                    ),
                   ),
                 ],
               ),
+            );
+          }
+
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Icon(
+                  icon,
+                  size: 32,
+                  color: iconColor,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  onPressed: onPressed,
+                  child: const Text('Otwórz'),
+                ),
+              ],
             ),
-            const SizedBox(width: 8),
-            FilledButton(
-              onPressed: onPressed,
-              child: const Text('Otwórz'),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -1444,11 +1503,15 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Icon(Icons.filter_list),
                 SizedBox(width: 8),
-                Text(
-                  'Filtry wydarzeń',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Text(
+                    'Filtry wydarzeń',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
