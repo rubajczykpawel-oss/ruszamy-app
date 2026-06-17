@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../models/app_event.dart';
-import 'info_chip.dart';
 
 class EventCard extends StatelessWidget {
   final AppEvent event;
@@ -15,10 +14,11 @@ class EventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String ageText = buildAgeText();
+    final double participantsProgress = getParticipantsProgress();
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 14),
+      elevation: 2,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
@@ -27,67 +27,15 @@ class EventCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                event.title,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(event.description),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  InfoChip(
-                    icon: Icons.location_city,
-                    label: event.city,
-                  ),
-                  InfoChip(
-                    icon: Icons.place,
-                    label: event.locationName,
-                  ),
-                  InfoChip(
-                    icon: Icons.calendar_month,
-                    label: event.date,
-                  ),
-                  InfoChip(
-                    icon: Icons.access_time,
-                    label: event.time,
-                  ),
-                  InfoChip(
-                    icon: Icons.directions_walk,
-                    label: event.activityType,
-                  ),
-                  InfoChip(
-                    icon: Icons.signal_cellular_alt,
-                    label: event.level,
-                  ),
-                  InfoChip(
-                    icon: Icons.people,
-                    label:
-                        '${event.participantsCount}/${event.maxParticipants}',
-                  ),
-                  if (ageText.isNotEmpty)
-                    InfoChip(
-                      icon: Icons.cake,
-                      label: ageText,
-                    ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              const Align(
-                alignment: Alignment.centerRight,
-                child: Text(
-                  'Kliknij, aby zobaczyć szczegóły →',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
+              buildTopSection(),
+              const SizedBox(height: 14),
+              buildDescription(),
+              const SizedBox(height: 14),
+              buildChipsSection(),
+              const SizedBox(height: 14),
+              buildParticipantsSection(participantsProgress),
+              const SizedBox(height: 14),
+              buildBottomSection(),
             ],
           ),
         ),
@@ -95,11 +43,188 @@ class EventCard extends StatelessWidget {
     );
   }
 
-  String buildAgeText() {
-    if (event.ageMin == null && event.ageMax == null) {
-      return '';
+  Widget buildTopSection() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CircleAvatar(
+          radius: 28,
+          backgroundColor: Colors.green.shade100,
+          child: const Icon(
+            Icons.directions_walk,
+            size: 32,
+          ),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                event.title,
+                style: const TextStyle(
+                  fontSize: 21,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.location_city,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      '${event.city} • ${event.locationName}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget buildDescription() {
+    if (event.description.trim().isEmpty) {
+      return const SizedBox.shrink();
     }
 
+    return Text(
+      event.description,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        color: Colors.grey.shade800,
+      ),
+    );
+  }
+
+  Widget buildChipsSection() {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        buildSmallChip(
+          icon: Icons.directions_walk,
+          text: event.activityType,
+        ),
+        buildSmallChip(
+          icon: Icons.signal_cellular_alt,
+          text: event.level,
+        ),
+        buildSmallChip(
+          icon: Icons.calendar_month,
+          text: event.date,
+        ),
+        buildSmallChip(
+          icon: Icons.schedule,
+          text: event.time,
+        ),
+        if (event.ageMin != null || event.ageMax != null)
+          buildSmallChip(
+            icon: Icons.cake,
+            text: buildAgeText(),
+          ),
+        if (event.groupId != null)
+          buildSmallChip(
+            icon: Icons.groups,
+            text: 'Grupa ID: ${event.groupId}',
+          ),
+      ],
+    );
+  }
+
+  Widget buildParticipantsSection(double participantsProgress) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(
+              Icons.people,
+              size: 18,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'Uczestnicy: ${event.participantsCount}/${event.maxParticipants}',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        LinearProgressIndicator(
+          value: participantsProgress,
+          minHeight: 8,
+          borderRadius: BorderRadius.circular(20),
+        ),
+      ],
+    );
+  }
+
+  Widget buildBottomSection() {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            event.isPublic ? 'Wydarzenie publiczne' : 'Wydarzenie prywatne',
+            style: TextStyle(
+              color: Colors.grey.shade700,
+              fontSize: 13,
+            ),
+          ),
+        ),
+        OutlinedButton.icon(
+          onPressed: onTap,
+          icon: const Icon(Icons.arrow_forward),
+          label: const Text('Szczegóły'),
+        ),
+      ],
+    );
+  }
+
+  Widget buildSmallChip({
+    required IconData icon,
+    required String text,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 7,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(
+          color: Colors.grey.shade300,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 16,
+          ),
+          const SizedBox(width: 5),
+          Text(
+            text,
+            style: const TextStyle(fontSize: 13),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String buildAgeText() {
     if (event.ageMin != null && event.ageMax != null) {
       return '${event.ageMin}-${event.ageMax} lat';
     }
@@ -108,6 +233,20 @@ class EventCard extends StatelessWidget {
       return 'od ${event.ageMin} lat';
     }
 
-    return 'do ${event.ageMax} lat';
+    if (event.ageMax != null) {
+      return 'do ${event.ageMax} lat';
+    }
+
+    return 'bez limitu wieku';
+  }
+
+  double getParticipantsProgress() {
+    if (event.maxParticipants <= 0) {
+      return 0;
+    }
+
+    return (event.participantsCount / event.maxParticipants)
+        .clamp(0.0, 1.0)
+        .toDouble();
   }
 }
