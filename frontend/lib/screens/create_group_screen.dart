@@ -1,7 +1,9 @@
-import 'package:flutter/material.dart';
+import 'dart:convert';
 
-import '../models/app_group.dart';
-import '../services/groups_api_service.dart';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
+import '../config/api_config.dart';
 
 class CreateGroupScreen extends StatefulWidget {
   final String token;
@@ -18,62 +20,122 @@ class CreateGroupScreen extends StatefulWidget {
 }
 
 class _CreateGroupScreenState extends State<CreateGroupScreen> {
-  final GroupsApiService groupsApiService = GroupsApiService();
-
   final TextEditingController nameController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
   final TextEditingController cityController = TextEditingController();
-  final TextEditingController activityTypeController = TextEditingController();
 
   bool isSaving = false;
+
+  String selectedActivityType = 'Spacer';
 
   String errorMessage = '';
   String successMessage = '';
 
-  AppGroup? createdGroup;
+  final List<String> activityTypes = [
+    'Spacer',
+    'Bieganie',
+    'Rower',
+    'Piłka nożna',
+    'Koszykówka',
+    'Siłownia plenerowa',
+    'Góry',
+    'Rolki',
+    'Tenis',
+    'Inne',
+  ];
 
   @override
-  void initState() {
-    super.initState();
+  void dispose() {
+    nameController.dispose();
+    descriptionController.dispose();
+    cityController.dispose();
 
-    cityController.text = 'Wrocław';
-    activityTypeController.text = 'walking';
+    super.dispose();
+  }
+
+  bool validateForm() {
+    final String name = nameController.text.trim();
+    final String city = cityController.text.trim();
+
+    if (name.isEmpty) {
+      showValidationError('Wpisz nazwę grupy.');
+      return false;
+    }
+
+    if (city.isEmpty) {
+      showValidationError('Wpisz miasto grupy.');
+      return false;
+    }
+
+    return true;
+  }
+
+  void showValidationError(String message) {
+    setState(() {
+      errorMessage = message;
+      successMessage = '';
+    });
+  }
+
+  String getErrorDetail(http.Response response) {
+    try {
+      final dynamic decodedBody = jsonDecode(response.body);
+
+      if (decodedBody is Map<String, dynamic>) {
+        return decodedBody['detail'].toString();
+      }
+
+      return response.body;
+    } catch (_) {
+      return response.body;
+    }
   }
 
   Future<void> createGroup() async {
+    if (!validateForm()) {
+      return;
+    }
+
     setState(() {
       isSaving = true;
       errorMessage = '';
       successMessage = '';
-      createdGroup = null;
     });
 
-    if (nameController.text.trim().isEmpty ||
-        descriptionController.text.trim().isEmpty ||
-        cityController.text.trim().isEmpty ||
-        activityTypeController.text.trim().isEmpty) {
-      setState(() {
-        isSaving = false;
-        errorMessage =
-            'Uzupełnij wymagane pola: nazwa, opis, miasto i typ aktywności.';
-      });
-
-      return;
-    }
+    final Map<String, dynamic> body = {
+      'name': nameController.text.trim(),
+      'description': descriptionController.text.trim(),
+      'city': cityController.text.trim(),
+      'activity_type': selectedActivityType,
+    };
 
     try {
-      final AppGroup newGroup = await groupsApiService.createGroup(
-        token: widget.token,
-        name: nameController.text,
-        description: descriptionController.text,
-        city: cityController.text,
-        activityType: activityTypeController.text,
+      final http.Response response = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/groups'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.token}',
+        },
+        body: jsonEncode(body),
       );
 
-      setState(() {
-        createdGroup = newGroup;
-        successMessage = 'Grupa została utworzona.';
-      });
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        setState(() {
+          successMessage = 'Grupa została utworzona.';
+        });
+
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        if (!mounted) {
+          return;
+        }
+
+        Navigator.pop(context, true);
+      } else {
+        setState(() {
+          errorMessage = getErrorDetail(response);
+        });
+      }
     } catch (error) {
       setState(() {
         errorMessage = error.toString().replaceFirst('Exception: ', '');
@@ -88,27 +150,16 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   }
 
   void clearForm() {
-    nameController.clear();
-    descriptionController.clear();
-
-    cityController.text = 'Wrocław';
-    activityTypeController.text = 'walking';
-
     setState(() {
+      nameController.clear();
+      descriptionController.clear();
+      cityController.clear();
+
+      selectedActivityType = 'Spacer';
+
       errorMessage = '';
       successMessage = '';
-      createdGroup = null;
     });
-  }
-
-  @override
-  void dispose() {
-    nameController.dispose();
-    descriptionController.dispose();
-    cityController.dispose();
-    activityTypeController.dispose();
-
-    super.dispose();
   }
 
   @override
@@ -116,119 +167,398 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dodaj grupę'),
+        actions: [
+          IconButton(
+            onPressed: isSaving ? null : clearForm,
+            icon: const Icon(Icons.clear),
+            tooltip: 'Wyczyść formularz',
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text(
-            'Nowa grupa',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Utwórz grupę bez używania Swaggera.',
-            style: TextStyle(fontSize: 16),
-          ),
-          const SizedBox(height: 20),
-          buildTextField(
-            controller: nameController,
-            label: 'Nazwa grupy',
-            icon: Icons.groups,
-          ),
+          buildHeaderCard(),
           const SizedBox(height: 16),
-          buildTextField(
-            controller: descriptionController,
-            label: 'Opis grupy',
-            icon: Icons.description,
-            maxLines: 4,
-          ),
+          buildMessages(),
+          buildBasicInfoSection(),
           const SizedBox(height: 16),
-          buildTextField(
-            controller: cityController,
-            label: 'Miasto',
-            icon: Icons.location_city,
-          ),
+          buildCommunitySection(),
           const SizedBox(height: 16),
-          buildTextField(
-            controller: activityTypeController,
-            label: 'Typ aktywności, np. walking, football, cycling',
-            icon: Icons.directions_walk,
-          ),
-          const SizedBox(height: 16),
-          if (errorMessage.isNotEmpty)
-            Card(
-              color: Colors.red.shade50,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  errorMessage,
-                  style: const TextStyle(color: Colors.red),
-                ),
-              ),
-            ),
-          if (successMessage.isNotEmpty)
-            Card(
-              color: Colors.green.shade50,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  successMessage,
-                  style: const TextStyle(color: Colors.green),
-                ),
-              ),
-            ),
-          if (createdGroup != null)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  'Utworzono grupę: ${createdGroup!.name}\nID: ${createdGroup!.id}',
-                ),
-              ),
-            ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 48,
-            child: FilledButton.icon(
-              onPressed: isSaving ? null : createGroup,
-              icon: const Icon(Icons.add),
-              label: isSaving
-                  ? const Text('Tworzenie...')
-                  : const Text('Utwórz grupę'),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 48,
-            child: OutlinedButton.icon(
-              onPressed: isSaving ? null : clearForm,
-              icon: const Icon(Icons.cleaning_services),
-              label: const Text('Wyczyść formularz'),
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'Przykładowe dane:',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 4),
-          const Text('Nazwa: Walking Wroclaw'),
-          const Text('Opis: Grupa dla osób, które chcą spacerować po mieście.'),
-          const Text('Miasto: Wrocław'),
-          const Text('Typ aktywności: walking'),
+          buildSaveSection(),
+          const SizedBox(height: 80),
         ],
       ),
+    );
+  }
+
+  Widget buildHeaderCard() {
+    return Card(
+      color: Colors.teal.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final bool isNarrow = constraints.maxWidth < 560;
+
+            if (isNarrow) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  buildHeaderIcon(),
+                  const SizedBox(height: 16),
+                  buildHeaderText(),
+                ],
+              );
+            }
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                buildHeaderIcon(),
+                const SizedBox(width: 18),
+                Expanded(
+                  child: buildHeaderText(),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget buildHeaderIcon() {
+    return CircleAvatar(
+      radius: 42,
+      backgroundColor: Colors.teal.shade100,
+      child: const Icon(
+        Icons.group_add,
+        size: 44,
+      ),
+    );
+  }
+
+  Widget buildHeaderText() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Nowa grupa',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 30,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Utwórz grupę dla osób, które chcą wspólnie umawiać się na aktywności.',
+          style: TextStyle(
+            fontSize: 15,
+            color: Colors.grey.shade800,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget buildMessages() {
+    if (errorMessage.isEmpty && successMessage.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      children: [
+        if (errorMessage.isNotEmpty)
+          Card(
+            color: Colors.red.shade50,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.error,
+                    color: Colors.red,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      errorMessage,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        if (successMessage.isNotEmpty)
+          Card(
+            color: Colors.green.shade50,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.check_circle,
+                    color: Colors.green,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      successMessage,
+                      style: const TextStyle(color: Colors.green),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget buildBasicInfoSection() {
+    return buildSectionCard(
+      color: Colors.grey.shade50,
+      icon: Icons.info,
+      title: 'Podstawowe informacje',
+      subtitle: 'Nazwa grupy, opis i miasto, w którym działa grupa.',
+      children: [
+        buildTextField(
+          controller: nameController,
+          label: 'Nazwa grupy',
+          hint: 'np. Spacerowicze Wrocław',
+          icon: Icons.groups,
+        ),
+        const SizedBox(height: 12),
+        buildTextField(
+          controller: descriptionController,
+          label: 'Opis grupy',
+          hint: 'Napisz krótko, dla kogo jest ta grupa',
+          icon: Icons.description,
+          maxLines: 4,
+        ),
+        const SizedBox(height: 12),
+        buildTextField(
+          controller: cityController,
+          label: 'Miasto',
+          hint: 'np. Wrocław',
+          icon: Icons.location_city,
+        ),
+      ],
+    );
+  }
+
+  Widget buildCommunitySection() {
+    return buildSectionCard(
+      color: Colors.orange.shade50,
+      icon: Icons.directions_walk,
+      title: 'Aktywność grupy',
+      subtitle: 'Wybierz główny typ aktywności, wokół której powstaje grupa.',
+      children: [
+        buildDropdownField(
+          label: 'Typ aktywności',
+          icon: Icons.directions_walk,
+          value: selectedActivityType,
+          values: activityTypes,
+          onChanged: (String value) {
+            setState(() {
+              selectedActivityType = value;
+            });
+          },
+        ),
+        const SizedBox(height: 12),
+        buildHintBox(),
+      ],
+    );
+  }
+
+  Widget buildHintBox() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.orange.shade100,
+        ),
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.lightbulb),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Po utworzeniu grupy możesz wejść w jej szczegóły i dodać do niej znajomych.',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildSaveSection() {
+    return Card(
+      color: Colors.indigo.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final bool isNarrow = constraints.maxWidth < 560;
+
+            if (isNarrow) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  buildSaveText(),
+                  const SizedBox(height: 16),
+                  buildSaveButton(),
+                ],
+              );
+            }
+
+            return Row(
+              children: [
+                Expanded(
+                  child: buildSaveText(),
+                ),
+                const SizedBox(width: 16),
+                SizedBox(
+                  width: 220,
+                  child: buildSaveButton(),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget buildSaveText() {
+    return const Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          Icons.save,
+          size: 34,
+          color: Colors.indigo,
+        ),
+        SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Zapisz grupę',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 21,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 6),
+              Text(
+                'Po zapisaniu wrócisz do poprzedniego ekranu, a lista grup się odświeży.',
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget buildSaveButton() {
+    return SizedBox(
+      height: 46,
+      width: double.infinity,
+      child: FilledButton.icon(
+        onPressed: isSaving ? null : createGroup,
+        icon: isSaving
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.save),
+        label: isSaving
+            ? const Text('Zapisywanie...')
+            : const Text('Zapisz'),
+      ),
+    );
+  }
+
+  Widget buildSectionCard({
+    required Color color,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required List<Widget> children,
+  }) {
+    return Card(
+      color: color,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            buildSectionHeader(
+              icon: icon,
+              title: title,
+              subtitle: subtitle,
+            ),
+            const SizedBox(height: 16),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildSectionHeader({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          icon,
+          size: 32,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(subtitle),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
   Widget buildTextField({
     required TextEditingController controller,
     required String label,
+    required String hint,
     required IconData icon,
     int maxLines = 1,
   }) {
@@ -237,9 +567,41 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
       maxLines: maxLines,
       decoration: InputDecoration(
         labelText: label,
+        hintText: hint,
         border: const OutlineInputBorder(),
         prefixIcon: Icon(icon),
       ),
+    );
+  }
+
+  Widget buildDropdownField({
+    required String label,
+    required IconData icon,
+    required String value,
+    required List<String> values,
+    required ValueChanged<String> onChanged,
+  }) {
+    return DropdownButtonFormField<String>(
+      initialValue: value,
+      isExpanded: true,
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
+        prefixIcon: Icon(icon),
+      ),
+      items: values.map((item) {
+        return DropdownMenuItem<String>(
+          value: item,
+          child: Text(item),
+        );
+      }).toList(),
+      onChanged: (String? newValue) {
+        if (newValue == null) {
+          return;
+        }
+
+        onChanged(newValue);
+      },
     );
   }
 }
