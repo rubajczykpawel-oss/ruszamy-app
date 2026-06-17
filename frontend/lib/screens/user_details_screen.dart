@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../models/user_profile.dart';
 import '../services/friends_api_service.dart';
 import '../widgets/info_chip.dart';
+import '../widgets/message_card.dart';
+import '../widgets/section_header.dart';
 
 class UserDetailsScreen extends StatefulWidget {
   final UserProfile user;
@@ -251,48 +253,14 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
     return Column(
       children: [
         if (errorMessage.isNotEmpty)
-          Card(
-            color: Colors.red.shade50,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.error,
-                    color: Colors.red,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      errorMessage,
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          MessageCard(
+            message: errorMessage,
+            isError: true,
           ),
         if (successMessage.isNotEmpty)
-          Card(
-            color: Colors.green.shade50,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.check_circle,
-                    color: Colors.green,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      successMessage,
-                      style: const TextStyle(color: Colors.green),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          MessageCard(
+            message: successMessage,
+            isError: false,
           ),
         const SizedBox(height: 16),
       ],
@@ -419,7 +387,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            buildSectionHeader(
+            const SectionHeader(
               icon: Icons.info,
               title: 'Dane użytkownika',
               subtitle: 'Podstawowe informacje o tym profilu.',
@@ -543,41 +511,6 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
             ? const Text('Usuwanie...')
             : const Text('Usuń znajomego'),
       ),
-    );
-  }
-
-  Widget buildSectionHeader({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(
-          icon,
-          size: 32,
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(subtitle),
-            ],
-          ),
-        ),
-      ],
     );
   }
 

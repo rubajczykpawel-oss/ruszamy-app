@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import '../models/friendship.dart';
 import '../models/user_profile.dart';
 import '../services/friends_api_service.dart';
+import '../widgets/empty_state_card.dart';
 import '../widgets/info_chip.dart';
+import '../widgets/message_card.dart';
+import '../widgets/section_header.dart';
 import 'find_friends_screen.dart';
 import 'user_details_screen.dart';
 
@@ -247,10 +250,6 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
     }
   }
 
-  int countAllSocialItems() {
-    return friends.length + receivedRequests.length + sentRequests.length;
-  }
-
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -313,14 +312,15 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
           buildMessages(),
           buildStatsGrid(),
           const SizedBox(height: 16),
-          buildSectionHeader(
+          const SectionHeader(
             icon: Icons.people,
             title: 'Moi znajomi',
-            subtitle: 'Lista osób, które masz już zaakceptowane jako znajomych.',
+            subtitle:
+                'Lista osób, które masz już zaakceptowane jako znajomych.',
           ),
           const SizedBox(height: 12),
           if (friends.isEmpty)
-            buildEmptyState(
+            EmptyStateCard(
               icon: Icons.people_outline,
               title: 'Nie masz jeszcze znajomych',
               description:
@@ -349,14 +349,15 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
           buildMessages(),
           buildStatsGrid(),
           const SizedBox(height: 16),
-          buildSectionHeader(
+          const SectionHeader(
             icon: Icons.inbox,
             title: 'Odebrane zaproszenia',
-            subtitle: 'Tutaj akceptujesz albo odrzucasz zaproszenia od innych osób.',
+            subtitle:
+                'Tutaj akceptujesz albo odrzucasz zaproszenia od innych osób.',
           ),
           const SizedBox(height: 12),
           if (receivedRequests.isEmpty)
-            buildEmptyState(
+            EmptyStateCard(
               icon: Icons.inbox,
               title: 'Brak odebranych zaproszeń',
               description:
@@ -385,14 +386,15 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
           buildMessages(),
           buildStatsGrid(),
           const SizedBox(height: 16),
-          buildSectionHeader(
+          const SectionHeader(
             icon: Icons.outbox,
             title: 'Wysłane zaproszenia',
-            subtitle: 'Tutaj widzisz zaproszenia, które wysłałeś do innych użytkowników.',
+            subtitle:
+                'Tutaj widzisz zaproszenia, które wysłałeś do innych użytkowników.',
           ),
           const SizedBox(height: 12),
           if (sentRequests.isEmpty)
-            buildEmptyState(
+            EmptyStateCard(
               icon: Icons.outbox,
               title: 'Brak wysłanych zaproszeń',
               description:
@@ -508,48 +510,14 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
     return Column(
       children: [
         if (errorMessage.isNotEmpty)
-          Card(
-            color: Colors.red.shade50,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.error,
-                    color: Colors.red,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      errorMessage,
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          MessageCard(
+            message: errorMessage,
+            isError: true,
           ),
         if (successMessage.isNotEmpty)
-          Card(
-            color: Colors.green.shade50,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.check_circle,
-                    color: Colors.green,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      successMessage,
-                      style: const TextStyle(color: Colors.green),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          MessageCard(
+            message: successMessage,
+            isError: false,
           ),
         const SizedBox(height: 16),
       ],
@@ -666,41 +634,6 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget buildSectionHeader({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(
-          icon,
-          size: 32,
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(subtitle),
-            ],
-          ),
-        ),
-      ],
     );
   }
 
@@ -1014,57 +947,6 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget buildEmptyState({
-    required IconData icon,
-    required String title,
-    required String description,
-    required String buttonText,
-    required VoidCallback onPressed,
-  }) {
-    return Card(
-      color: Colors.grey.shade50,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              size: 70,
-              color: Colors.grey.shade600,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              description,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.grey.shade800,
-              ),
-            ),
-            const SizedBox(height: 18),
-            SizedBox(
-              height: 44,
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: onPressed,
-                icon: const Icon(Icons.arrow_forward),
-                label: Text(buttonText),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

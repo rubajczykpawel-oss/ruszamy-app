@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../models/app_group.dart';
 import '../services/groups_api_service.dart';
+import '../widgets/empty_state_card.dart';
 import '../widgets/group_card.dart';
+import '../widgets/message_card.dart';
+import '../widgets/section_header.dart';
 import 'create_group_screen.dart';
 import 'group_details_screen.dart';
 
@@ -176,9 +179,21 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
                   const SizedBox(height: 16),
                   buildStatsGrid(),
                   const SizedBox(height: 16),
-                  if (errorMessage.isNotEmpty) buildErrorCard(),
+                  if (errorMessage.isNotEmpty)
+                    MessageCard(
+                      message: errorMessage,
+                      isError: true,
+                    ),
+                  if (errorMessage.isNotEmpty) const SizedBox(height: 16),
                   if (myGroups.isEmpty)
-                    buildEmptyState()
+                    EmptyStateCard(
+                      icon: Icons.group_off,
+                      title: 'Nie należysz jeszcze do żadnej grupy',
+                      description:
+                          'Utwórz własną grupę albo poproś znajomego o dodanie Cię do istniejącej grupy.',
+                      buttonText: 'Dodaj pierwszą grupę',
+                      onPressed: openCreateGroup,
+                    )
                   else
                     buildGroupsSection(),
                   const SizedBox(height: 80),
@@ -404,83 +419,15 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
     );
   }
 
-  Widget buildErrorCard() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Card(
-        color: Colors.red.shade50,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.error,
-                color: Colors.red,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  errorMessage,
-                  style: const TextStyle(color: Colors.red),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget buildEmptyState() {
-    return Card(
-      color: Colors.grey.shade50,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            Icon(
-              Icons.group_off,
-              size: 70,
-              color: Colors.grey.shade600,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Nie należysz jeszcze do żadnej grupy',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Utwórz własną grupę albo poproś znajomego o dodanie Cię do istniejącej grupy.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.grey.shade800,
-              ),
-            ),
-            const SizedBox(height: 18),
-            SizedBox(
-              height: 44,
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: openCreateGroup,
-                icon: const Icon(Icons.add),
-                label: const Text('Dodaj pierwszą grupę'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget buildGroupsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        buildSectionTitle(),
+        SectionHeader(
+          icon: Icons.list_alt,
+          title: 'Lista grup (${myGroups.length})',
+          subtitle: 'Kliknij grupę, żeby zobaczyć szczegóły, członków i akcje.',
+        ),
         const SizedBox(height: 12),
         ...myGroups.map((group) {
           return GroupCard(
@@ -490,26 +437,6 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
             },
           );
         }),
-      ],
-    );
-  }
-
-  Widget buildSectionTitle() {
-    return Row(
-      children: [
-        const Icon(Icons.list_alt),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            'Lista grup (${myGroups.length})',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
       ],
     );
   }

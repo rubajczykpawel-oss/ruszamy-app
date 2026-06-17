@@ -7,6 +7,8 @@ import '../config/api_config.dart';
 import '../models/user_profile.dart';
 import '../services/auth_api_service.dart';
 import '../widgets/info_chip.dart';
+import '../widgets/message_card.dart';
+import '../widgets/section_header.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String token;
@@ -138,6 +140,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return true;
   }
 
+  String getErrorDetail(http.Response response) {
+    try {
+      final dynamic decodedBody = jsonDecode(response.body);
+
+      if (decodedBody is Map<String, dynamic>) {
+        return decodedBody['detail'].toString();
+      }
+
+      return response.body;
+    } catch (_) {
+      return response.body;
+    }
+  }
+
   Future<void> saveProfile() async {
     final UserProfile? currentProfile = profile;
 
@@ -180,14 +196,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
         await loadProfile(clearMessages: false);
       } else {
-        final dynamic decodedBody = jsonDecode(response.body);
-
-        final String detail = decodedBody is Map<String, dynamic>
-            ? decodedBody['detail'].toString()
-            : response.body;
-
         setState(() {
-          errorMessage = detail;
+          errorMessage = getErrorDetail(response);
         });
       }
     } catch (error) {
@@ -216,11 +226,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   String buildInitial(UserProfile profile) {
-    if (profile.username.trim().isEmpty) {
+    final String username = profile.username.trim();
+
+    if (username.isEmpty) {
       return '?';
     }
 
-    return profile.username.trim().characters.first.toUpperCase();
+    return username[0].toUpperCase();
   }
 
   @override
@@ -393,48 +405,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Column(
       children: [
         if (errorMessage.isNotEmpty)
-          Card(
-            color: Colors.red.shade50,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.error,
-                    color: Colors.red,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      errorMessage,
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          MessageCard(
+            message: errorMessage,
+            isError: true,
           ),
         if (successMessage.isNotEmpty)
-          Card(
-            color: Colors.green.shade50,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.check_circle,
-                    color: Colors.green,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      successMessage,
-                      style: const TextStyle(color: Colors.green),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          MessageCard(
+            message: successMessage,
+            isError: false,
           ),
         const SizedBox(height: 16),
       ],
@@ -561,7 +539,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            buildSectionHeader(
+            const SectionHeader(
               icon: Icons.info,
               title: 'Dane profilu',
               subtitle: 'Podstawowe dane widoczne w aplikacji.',
@@ -609,7 +587,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            buildSectionHeader(
+            const SectionHeader(
               icon: Icons.edit,
               title: 'Edytuj profil',
               subtitle:
@@ -625,13 +603,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            TextField(
-              enabled: false,
-              controller: TextEditingController(text: profile.email),
+            InputDecorator(
               decoration: const InputDecoration(
                 labelText: 'Email',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.email),
+              ),
+              child: Text(
+                profile.email,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             const SizedBox(height: 12),
@@ -676,41 +657,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget buildSectionHeader({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(
-          icon,
-          size: 32,
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(subtitle),
-            ],
-          ),
-        ),
-      ],
     );
   }
 

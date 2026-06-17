@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import '../models/user_profile.dart';
 import '../services/friends_api_service.dart';
 import '../services/users_api_service.dart';
+import '../widgets/empty_state_card.dart';
 import '../widgets/info_chip.dart';
+import '../widgets/message_card.dart';
+import '../widgets/section_header.dart';
 
 class FindFriendsScreen extends StatefulWidget {
   final String token;
@@ -137,6 +140,30 @@ class _FindFriendsScreenState extends State<FindFriendsScreen> {
     return '${user.age} lat';
   }
 
+  String getResultsTitle() {
+    if (!hasSearched) {
+      return 'Wyniki wyszukiwania';
+    }
+
+    if (hasSearched && users.isEmpty && !isSearching) {
+      return 'Brak wyników';
+    }
+
+    return 'Znalezieni użytkownicy (${users.length})';
+  }
+
+  String getResultsSubtitle() {
+    if (!hasSearched) {
+      return 'Wpisz nazwę użytkownika i kliknij Szukaj.';
+    }
+
+    if (hasSearched && users.isEmpty && !isSearching) {
+      return 'Nie znaleziono użytkowników dla podanej nazwy.';
+    }
+
+    return 'Możesz wysłać zaproszenie do wybranej osoby.';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -157,10 +184,26 @@ class _FindFriendsScreenState extends State<FindFriendsScreen> {
           const SizedBox(height: 16),
           buildSearchCard(),
           const SizedBox(height: 16),
-          buildMessages(),
-          buildResultsHeader(),
+          if (errorMessage.isNotEmpty)
+            MessageCard(
+              message: errorMessage,
+              isError: true,
+            ),
+          if (successMessage.isNotEmpty)
+            MessageCard(
+              message: successMessage,
+              isError: false,
+            ),
+          if (errorMessage.isNotEmpty || successMessage.isNotEmpty)
+            const SizedBox(height: 16),
+          SectionHeader(
+            icon: Icons.people,
+            title: getResultsTitle(),
+            subtitle: getResultsSubtitle(),
+          ),
           const SizedBox(height: 12),
           buildResultsContent(),
+          const SizedBox(height: 80),
         ],
       ),
     );
@@ -304,110 +347,8 @@ class _FindFriendsScreenState extends State<FindFriendsScreen> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             : const Icon(Icons.search),
-        label: isSearching
-            ? const Text('Szukam...')
-            : const Text('Szukaj'),
+        label: isSearching ? const Text('Szukam...') : const Text('Szukaj'),
       ),
-    );
-  }
-
-  Widget buildMessages() {
-    if (errorMessage.isEmpty && successMessage.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Column(
-      children: [
-        if (errorMessage.isNotEmpty)
-          Card(
-            color: Colors.red.shade50,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.error,
-                    color: Colors.red,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      errorMessage,
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        if (successMessage.isNotEmpty)
-          Card(
-            color: Colors.green.shade50,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.check_circle,
-                    color: Colors.green,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      successMessage,
-                      style: const TextStyle(color: Colors.green),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        const SizedBox(height: 16),
-      ],
-    );
-  }
-
-  Widget buildResultsHeader() {
-    String title = 'Wyniki wyszukiwania';
-    String subtitle = 'Wpisz nazwę użytkownika i kliknij Szukaj.';
-
-    if (hasSearched && users.isEmpty && !isSearching) {
-      title = 'Brak wyników';
-      subtitle = 'Nie znaleziono użytkowników dla podanej nazwy.';
-    }
-
-    if (hasSearched && users.isNotEmpty) {
-      title = 'Znalezieni użytkownicy (${users.length})';
-      subtitle = 'Możesz wysłać zaproszenie do wybranej osoby.';
-    }
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Icon(
-          Icons.people,
-          size: 32,
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(subtitle),
-            ],
-          ),
-        ),
-      ],
     );
   }
 
@@ -417,11 +358,20 @@ class _FindFriendsScreenState extends State<FindFriendsScreen> {
     }
 
     if (!hasSearched) {
-      return buildStartState();
+      return const EmptyStateCard(
+        icon: Icons.search,
+        title: 'Zacznij od wyszukania użytkownika',
+        description:
+            'Wpisz nazwę użytkownika w polu powyżej. Możesz wpisać całą nazwę albo fragment.',
+      );
     }
 
     if (users.isEmpty) {
-      return buildEmptyState();
+      return const EmptyStateCard(
+        icon: Icons.person_off,
+        title: 'Nikogo nie znaleziono',
+        description: 'Spróbuj wpisać krótszą nazwę albo sprawdź pisownię.',
+      );
     }
 
     return Column(
@@ -437,76 +387,6 @@ class _FindFriendsScreenState extends State<FindFriendsScreen> {
         padding: EdgeInsets.all(24),
         child: Center(
           child: CircularProgressIndicator(),
-        ),
-      ),
-    );
-  }
-
-  Widget buildStartState() {
-    return Card(
-      color: Colors.grey.shade50,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            Icon(
-              Icons.search,
-              size: 70,
-              color: Colors.grey.shade600,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Zacznij od wyszukania użytkownika',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Wpisz nazwę użytkownika w polu powyżej. Możesz wpisać całą nazwę albo fragment.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.grey.shade800,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget buildEmptyState() {
-    return Card(
-      color: Colors.amber.shade50,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            Icon(
-              Icons.person_off,
-              size: 70,
-              color: Colors.grey.shade700,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Nikogo nie znaleziono',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Spróbuj wpisać krótszą nazwę albo sprawdź pisownię.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.grey.shade800,
-              ),
-            ),
-          ],
         ),
       ),
     );

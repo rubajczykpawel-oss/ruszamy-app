@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../models/app_event.dart';
 import '../services/events_api_service.dart';
+import '../widgets/empty_state_card.dart';
 import '../widgets/event_card.dart';
+import '../widgets/message_card.dart';
+import '../widgets/section_header.dart';
 import 'create_event_screen.dart';
 import 'event_details_screen.dart';
 
@@ -146,9 +149,21 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                   const SizedBox(height: 16),
                   buildStatsGrid(),
                   const SizedBox(height: 16),
-                  if (errorMessage.isNotEmpty) buildErrorCard(),
+                  if (errorMessage.isNotEmpty)
+                    MessageCard(
+                      message: errorMessage,
+                      isError: true,
+                    ),
+                  if (errorMessage.isNotEmpty) const SizedBox(height: 16),
                   if (myEvents.isEmpty)
-                    buildEmptyState()
+                    EmptyStateCard(
+                      icon: Icons.event_busy,
+                      title: 'Nie masz jeszcze żadnych wydarzeń',
+                      description:
+                          'Utwórz własne wydarzenie albo dołącz do istniejącego wydarzenia publicznego.',
+                      buttonText: 'Dodaj pierwsze wydarzenie',
+                      onPressed: openCreateEvent,
+                    )
                   else
                     buildEventsSection(),
                   const SizedBox(height: 80),
@@ -374,83 +389,16 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
     );
   }
 
-  Widget buildErrorCard() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Card(
-        color: Colors.red.shade50,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.error,
-                color: Colors.red,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  errorMessage,
-                  style: const TextStyle(color: Colors.red),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget buildEmptyState() {
-    return Card(
-      color: Colors.grey.shade50,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            Icon(
-              Icons.event_busy,
-              size: 70,
-              color: Colors.grey.shade600,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Nie masz jeszcze żadnych wydarzeń',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Utwórz własne wydarzenie albo dołącz do istniejącego wydarzenia publicznego.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.grey.shade800,
-              ),
-            ),
-            const SizedBox(height: 18),
-            SizedBox(
-              height: 44,
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: openCreateEvent,
-                icon: const Icon(Icons.add),
-                label: const Text('Dodaj pierwsze wydarzenie'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget buildEventsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        buildSectionTitle(),
+        SectionHeader(
+          icon: Icons.list_alt,
+          title: 'Lista wydarzeń (${myEvents.length})',
+          subtitle:
+              'Kliknij wydarzenie, żeby zobaczyć szczegóły, uczestników i akcje.',
+        ),
         const SizedBox(height: 12),
         ...myEvents.map((event) {
           return EventCard(
@@ -460,26 +408,6 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
             },
           );
         }),
-      ],
-    );
-  }
-
-  Widget buildSectionTitle() {
-    return Row(
-      children: [
-        const Icon(Icons.list_alt),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            'Lista wydarzeń (${myEvents.length})',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
       ],
     );
   }
