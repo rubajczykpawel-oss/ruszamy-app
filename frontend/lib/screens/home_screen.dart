@@ -7,8 +7,14 @@ import '../services/auth_api_service.dart';
 import '../services/events_api_service.dart';
 import '../services/friends_api_service.dart';
 import '../services/groups_api_service.dart';
+import '../theme/app_colors.dart';
+import '../widgets/empty_state_card.dart';
 import '../widgets/event_card.dart';
+import '../widgets/message_card.dart';
+import '../widgets/primary_action_button.dart';
 import '../widgets/profile_header.dart';
+import '../widgets/sport_hero_card.dart';
+import '../widgets/stat_card.dart';
 import 'create_event_screen.dart';
 import 'create_group_screen.dart';
 import 'event_details_screen.dart';
@@ -60,6 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String selectedLevel = '';
 
   UserProfile? profile;
+
   List<AppEvent> events = [];
   List<AppEvent> myEvents = [];
   List<UserProfile> friends = [];
@@ -448,6 +455,7 @@ class _HomeScreenState extends State<HomeScreen> {
         isLoadingGroups;
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Ruszamy App'),
         actions: [
@@ -506,7 +514,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget buildLeftMenu() {
     return Material(
-      color: Colors.grey.shade100,
+      color: AppColors.background,
       child: ListView(
         padding: const EdgeInsets.all(12),
         children: [
@@ -628,33 +636,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 16),
           buildStatsGrid(),
           const SizedBox(height: 24),
-          Container(
-            key: publicEventsKey,
-            child: Row(
-              children: [
-                const Icon(Icons.public),
-                const SizedBox(width: 8),
-                const Expanded(
-                  child: Text(
-                    'Publiczne wydarzenia',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                if (events.isNotEmpty)
-                  Text(
-                    '${filteredEvents.length}/${events.length}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-              ],
-            ),
-          ),
+          buildPublicEventsHeader(filteredEvents),
           const SizedBox(height: 12),
           if (events.isNotEmpty)
             buildFiltersCard(
@@ -662,44 +644,13 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           if (events.isNotEmpty) const SizedBox(height: 12),
           if (errorMessage.isNotEmpty)
-            Card(
-              color: Colors.red.shade50,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  errorMessage,
-                  style: const TextStyle(color: Colors.red),
-                ),
-              ),
+            MessageCard(
+              message: errorMessage,
+              isError: true,
             ),
-          if (events.isEmpty)
-            const Card(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: Text(
-                  'Brak publicznych wydarzeń. Utwórz event przez menu Dodaj wydarzenie.',
-                ),
-              ),
-            )
-          else if (filteredEvents.isEmpty)
-            Card(
-              color: Colors.amber.shade50,
-              child: const Padding(
-                padding: EdgeInsets.all(16),
-                child: Text(
-                  'Brak wydarzeń pasujących do wybranych filtrów. Wyczyść filtry albo wybierz inne wartości.',
-                ),
-              ),
-            )
-          else
-            ...filteredEvents.map((event) {
-              return EventCard(
-                event: event,
-                onTap: () {
-                  openEventDetails(event);
-                },
-              );
-            }),
+          if (errorMessage.isNotEmpty) const SizedBox(height: 12),
+          buildPublicEventsContent(filteredEvents),
+          const SizedBox(height: 80),
         ],
       ),
     );
@@ -709,129 +660,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final String username = profile?.username ?? 'użytkowniku';
     final String cityText = profile?.city ?? 'nie ustawiono miasta';
 
-    return Card(
-      color: Colors.green.shade50,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final bool isNarrow = constraints.maxWidth < 620;
-
-          if (isNarrow) {
-            return Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      CircleAvatar(
-                        radius: 34,
-                        backgroundColor: Colors.green.shade100,
-                        child: const Icon(
-                          Icons.directions_walk,
-                          size: 38,
-                        ),
-                      ),
-                      const SizedBox(width: 18),
-                      Expanded(
-                        child: buildDashboardHeaderText(
-                          username: username,
-                          cityText: cityText,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 44,
-                    child: FilledButton.icon(
-                      onPressed: openCreateEvent,
-                      icon: const Icon(Icons.add),
-                      label: const Text('Dodaj event'),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 34,
-                  backgroundColor: Colors.green.shade100,
-                  child: const Icon(
-                    Icons.directions_walk,
-                    size: 38,
-                  ),
-                ),
-                const SizedBox(width: 18),
-                Expanded(
-                  child: buildDashboardHeaderText(
-                    username: username,
-                    cityText: cityText,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                FilledButton.icon(
-                  onPressed: openCreateEvent,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Dodaj event'),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget buildDashboardHeaderText({
-    required String username,
-    required String cityText,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Cześć, $username!',
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Znajdź aktywność, dołącz do ludzi albo stwórz własne wydarzenie.',
-          style: TextStyle(
-            fontSize: 15,
-            color: Colors.grey.shade800,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            const Icon(
-              Icons.location_city,
-              size: 18,
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                'Twoje miasto: $cityText',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 14),
-              ),
-            ),
-          ],
-        ),
-      ],
+    return SportHeroCard(
+      title: 'Cześć, $username!',
+      subtitle:
+          'Twoje miasto: $cityText. Znajdź aktywność, dołącz do ludzi albo stwórz własne sportowe wydarzenie.',
+      buttonText: 'Dodaj event',
+      icon: Icons.directions_run,
+      onPressed: openCreateEvent,
     );
   }
 
@@ -854,31 +689,31 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             SizedBox(
               width: cardWidth,
-              child: buildStatCard(
+              child: buildClickableStatCard(
                 icon: Icons.public,
                 value: events.length.toString(),
                 title: 'Publiczne eventy',
                 subtitle: 'Dostępne dla wszystkich',
-                color: Colors.blue.shade50,
-                iconColor: Colors.blue,
+                color: AppColors.sportBlueLight,
+                iconColor: AppColors.sportBlue,
                 onTap: scrollToPublicEvents,
               ),
             ),
             SizedBox(
               width: cardWidth,
-              child: buildStatCard(
+              child: buildClickableStatCard(
                 icon: Icons.event_available,
                 value: myEvents.length.toString(),
                 title: 'Moje eventy',
                 subtitle: 'Twoje zapisane wydarzenia',
-                color: Colors.green.shade50,
-                iconColor: Colors.green,
+                color: AppColors.primaryLight,
+                iconColor: AppColors.primary,
                 onTap: openMyEvents,
               ),
             ),
             SizedBox(
               width: cardWidth,
-              child: buildStatCard(
+              child: buildClickableStatCard(
                 icon: Icons.people,
                 value: friends.length.toString(),
                 title: 'Znajomi',
@@ -890,13 +725,13 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             SizedBox(
               width: cardWidth,
-              child: buildStatCard(
+              child: buildClickableStatCard(
                 icon: Icons.groups,
                 value: groups.length.toString(),
                 title: 'Grupy',
                 subtitle: 'Społeczności, w których jesteś',
-                color: Colors.orange.shade50,
-                iconColor: Colors.orange,
+                color: AppColors.accentLight,
+                iconColor: AppColors.accent,
                 onTap: openMyGroups,
               ),
             ),
@@ -906,7 +741,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget buildStatCard({
+  Widget buildClickableStatCard({
     required IconData icon,
     required String value,
     required String title,
@@ -915,56 +750,81 @@ class _HomeScreenState extends State<HomeScreen> {
     required Color iconColor,
     required VoidCallback onTap,
   }) {
-    return Card(
-      color: color,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: Colors.white,
-                child: Icon(
-                  icon,
-                  color: iconColor,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      value,
-                      style: const TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+    return GestureDetector(
+      onTap: onTap,
+      child: StatCard(
+        icon: icon,
+        value: value,
+        title: title,
+        subtitle: subtitle,
+        color: color,
+        iconColor: iconColor,
       ),
+    );
+  }
+
+  Widget buildPublicEventsHeader(List<AppEvent> filteredEvents) {
+    return Container(
+      key: publicEventsKey,
+      child: Row(
+        children: [
+          const Icon(Icons.public),
+          const SizedBox(width: 8),
+          const Expanded(
+            child: Text(
+              'Publiczne wydarzenia',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          if (events.isNotEmpty)
+            Text(
+              '${filteredEvents.length}/${events.length}',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildPublicEventsContent(List<AppEvent> filteredEvents) {
+    if (events.isEmpty) {
+      return EmptyStateCard(
+        icon: Icons.event_busy,
+        title: 'Brak publicznych wydarzeń',
+        description:
+            'Utwórz pierwsze wydarzenie sportowe i sprawdź, jak wygląda w aplikacji.',
+        buttonText: 'Dodaj wydarzenie',
+        onPressed: openCreateEvent,
+      );
+    }
+
+    if (filteredEvents.isEmpty) {
+      return EmptyStateCard(
+        icon: Icons.filter_alt_off,
+        title: 'Brak wyników dla filtrów',
+        description:
+            'Nie ma wydarzeń pasujących do wybranego miasta, aktywności albo poziomu.',
+        buttonText: 'Wyczyść filtry',
+        onPressed: clearFilters,
+      );
+    }
+
+    return Column(
+      children: filteredEvents.map((event) {
+        return EventCard(
+          event: event,
+          onTap: () {
+            openEventDetails(event);
+          },
+        );
+      }).toList(),
     );
   }
 
@@ -1017,8 +877,8 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: 12),
         buildNavigationCard(
-          color: Colors.green.shade50,
-          iconColor: Colors.green,
+          color: AppColors.primaryLight,
+          iconColor: AppColors.primary,
           icon: Icons.event_available,
           title: 'Moje wydarzenia',
           subtitle: 'Zobacz eventy, do których jesteś zapisany.',
@@ -1026,8 +886,8 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: 12),
         buildNavigationCard(
-          color: Colors.blue.shade50,
-          iconColor: Colors.blue,
+          color: AppColors.sportBlueLight,
+          iconColor: AppColors.sportBlue,
           icon: Icons.groups,
           title: 'Moje grupy',
           subtitle: 'Zobacz grupy, do których należysz.',
@@ -1105,7 +965,7 @@ class _HomeScreenState extends State<HomeScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
@@ -1123,7 +983,7 @@ class _HomeScreenState extends State<HomeScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -1280,6 +1140,7 @@ class _HomeScreenState extends State<HomeScreen> {
     required VoidCallback onTap,
   }) {
     return Card(
+      elevation: 0,
       margin: EdgeInsets.zero,
       child: ListTile(
         dense: true,
@@ -1308,6 +1169,7 @@ class _HomeScreenState extends State<HomeScreen> {
     required List<Widget> children,
   }) {
     return Card(
+      elevation: 0,
       margin: EdgeInsets.zero,
       child: ExpansionTile(
         initiallyExpanded: isExpanded,
@@ -1341,7 +1203,7 @@ class _HomeScreenState extends State<HomeScreen> {
             vertical: 10,
           ),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.cardBackground,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
@@ -1374,15 +1236,16 @@ class _HomeScreenState extends State<HomeScreen> {
     required VoidCallback onPressed,
   }) {
     return Card(
+      elevation: 0,
       color: color,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final bool isNarrow = constraints.maxWidth < 520;
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final bool isNarrow = constraints.maxWidth < 520;
 
-          if (isNarrow) {
-            return Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
+            if (isNarrow) {
+              return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
@@ -1413,22 +1276,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 44,
-                    child: FilledButton(
-                      onPressed: onPressed,
-                      child: const Text('Otwórz'),
-                    ),
+                  PrimaryActionButton(
+                    icon: Icons.arrow_forward,
+                    label: 'Otwórz',
+                    onPressed: onPressed,
                   ),
                 ],
-              ),
-            );
-          }
+              );
+            }
 
-          return Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
+            return Row(
               children: [
                 Icon(
                   icon,
@@ -1459,14 +1316,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                FilledButton(
-                  onPressed: onPressed,
-                  child: const Text('Otwórz'),
+                SizedBox(
+                  width: 140,
+                  child: PrimaryActionButton(
+                    icon: Icons.arrow_forward,
+                    label: 'Otwórz',
+                    onPressed: onPressed,
+                  ),
                 ),
               ],
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -1493,7 +1354,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
 
     return Card(
-      color: Colors.grey.shade100,
+      elevation: 0,
+      color: AppColors.cardBackground,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
