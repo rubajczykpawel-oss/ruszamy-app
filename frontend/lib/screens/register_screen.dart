@@ -4,28 +4,32 @@ import '../services/auth_api_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/message_card.dart';
 import '../widgets/primary_action_button.dart';
-import 'home_screen.dart';
-import 'register_screen.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({
+class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({
     super.key,
   });
 
   @override
-  State<LoginScreen> createState() {
-    return _LoginScreenState();
+  State<RegisterScreen> createState() {
+    return _RegisterScreenState();
   }
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _RegisterScreenState extends State<RegisterScreen> {
   final AuthApiService authApiService = AuthApiService();
 
   final TextEditingController emailController = TextEditingController();
+  final TextEditingController usernameController = TextEditingController();
+  final TextEditingController cityController = TextEditingController();
+  final TextEditingController ageController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  final TextEditingController confirmPasswordController =
+      TextEditingController();
 
   bool isLoading = false;
   bool isPasswordVisible = false;
+  bool isConfirmPasswordVisible = false;
 
   String errorMessage = '';
   String successMessage = '';
@@ -33,46 +37,97 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void dispose() {
     emailController.dispose();
+    usernameController.dispose();
+    cityController.dispose();
+    ageController.dispose();
     passwordController.dispose();
+    confirmPasswordController.dispose();
 
     super.dispose();
   }
 
+  int? parseAge() {
+    final String ageText = ageController.text.trim();
+
+    if (ageText.isEmpty) {
+      return null;
+    }
+
+    return int.tryParse(ageText);
+  }
+
   bool validateForm() {
     final String email = emailController.text.trim();
+    final String username = usernameController.text.trim();
+    final String ageText = ageController.text.trim();
     final String password = passwordController.text.trim();
+    final String confirmPassword = confirmPasswordController.text.trim();
 
     if (email.isEmpty) {
-      setState(() {
-        errorMessage = 'Wpisz adres e-mail.';
-        successMessage = '';
-      });
-
+      showError('Wpisz adres e-mail.');
       return false;
     }
 
     if (!email.contains('@')) {
-      setState(() {
-        errorMessage = 'Adres e-mail wygląda niepoprawnie.';
-        successMessage = '';
-      });
-
+      showError('Adres e-mail wygląda niepoprawnie.');
       return false;
     }
 
-    if (password.isEmpty) {
-      setState(() {
-        errorMessage = 'Wpisz hasło.';
-        successMessage = '';
-      });
+    if (username.isEmpty) {
+      showError('Wpisz nazwę użytkownika.');
+      return false;
+    }
 
+    if (username.length < 3) {
+      showError('Nazwa użytkownika powinna mieć minimum 3 znaki.');
+      return false;
+    }
+
+    if (ageText.isNotEmpty) {
+      final int? age = int.tryParse(ageText);
+
+      if (age == null) {
+        showError('Wiek musi być liczbą.');
+        return false;
+      }
+
+      if (age < 1 || age > 120) {
+        showError('Wiek musi być w zakresie od 1 do 120.');
+        return false;
+      }
+    }
+
+    if (password.isEmpty) {
+      showError('Wpisz hasło.');
+      return false;
+    }
+
+    if (password.length < 4) {
+      showError('Hasło powinno mieć minimum 4 znaki.');
+      return false;
+    }
+
+    if (confirmPassword.isEmpty) {
+      showError('Powtórz hasło.');
+      return false;
+    }
+
+    if (password != confirmPassword) {
+      showError('Hasła nie są takie same.');
       return false;
     }
 
     return true;
   }
 
-  Future<void> login() async {
+  void showError(String message) {
+    setState(() {
+      errorMessage = message;
+      successMessage = '';
+    });
+  }
+
+  Future<void> register() async {
     if (!validateForm()) {
       return;
     }
@@ -84,25 +139,28 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final String token = await authApiService.login(
+      await authApiService.register(
         email: emailController.text.trim(),
+        username: usernameController.text.trim(),
         password: passwordController.text.trim(),
+        city: cityController.text.trim().isEmpty
+            ? null
+            : cityController.text.trim(),
+        age: parseAge(),
       );
+
+      setState(() {
+        successMessage =
+            'Konto zostało utworzone. Za chwilę wrócisz do logowania.';
+      });
+
+      await Future.delayed(const Duration(milliseconds: 900));
 
       if (!mounted) {
         return;
       }
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) {
-            return HomeScreen(
-              token: token,
-            );
-          },
-        ),
-      );
+      Navigator.pop(context, true);
     } catch (error) {
       setState(() {
         errorMessage = error.toString().replaceFirst('Exception: ', '');
@@ -122,22 +180,14 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
-  Future<void> openRegisterScreen() async {
-    final bool? wasRegistered = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (context) {
-          return const RegisterScreen();
-        },
-      ),
-    );
+  void toggleConfirmPasswordVisibility() {
+    setState(() {
+      isConfirmPasswordVisible = !isConfirmPasswordVisible;
+    });
+  }
 
-    if (wasRegistered == true) {
-      setState(() {
-        errorMessage = '';
-        successMessage = 'Konto zostało utworzone. Możesz się teraz zalogować.';
-      });
-    }
+  void backToLogin() {
+    Navigator.pop(context, false);
   }
 
   @override
@@ -152,8 +202,8 @@ class _LoginScreenState extends State<LoginScreen> {
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 440),
-                  child: buildLoginCard(),
+                  constraints: const BoxConstraints(maxWidth: 500),
+                  child: buildRegisterCard(),
                 ),
               ),
             ),
@@ -169,8 +219,8 @@ class _LoginScreenState extends State<LoginScreen> {
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              AppColors.primary,
               AppColors.sportBlue,
+              AppColors.primary,
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -182,7 +232,7 @@ class _LoginScreenState extends State<LoginScreen> {
               right: -50,
               top: 40,
               child: Icon(
-                Icons.sports_soccer,
+                Icons.sports_basketball,
                 size: 220,
                 color: Colors.white.withValues(alpha: 0.08),
               ),
@@ -191,7 +241,7 @@ class _LoginScreenState extends State<LoginScreen> {
               left: -40,
               bottom: 50,
               child: Icon(
-                Icons.directions_run,
+                Icons.directions_bike,
                 size: 210,
                 color: Colors.white.withValues(alpha: 0.08),
               ),
@@ -200,7 +250,7 @@ class _LoginScreenState extends State<LoginScreen> {
               right: 40,
               bottom: 80,
               child: Icon(
-                Icons.hiking,
+                Icons.sports_soccer,
                 size: 150,
                 color: Colors.white.withValues(alpha: 0.07),
               ),
@@ -211,7 +261,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget buildLoginCard() {
+  Widget buildRegisterCard() {
     return Card(
       elevation: 0,
       clipBehavior: Clip.antiAlias,
@@ -224,9 +274,9 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 18),
             buildTitle(),
             const SizedBox(height: 24),
-            buildLoginForm(),
+            buildRegisterForm(),
             const SizedBox(height: 16),
-            buildRegisterButton(),
+            buildBackToLoginButton(),
           ],
         ),
       ),
@@ -236,11 +286,11 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget buildLogo() {
     return const CircleAvatar(
       radius: 46,
-      backgroundColor: AppColors.primaryLight,
+      backgroundColor: AppColors.sportBlueLight,
       child: Icon(
-        Icons.directions_run,
+        Icons.person_add,
         size: 52,
-        color: AppColors.primary,
+        color: AppColors.sportBlue,
       ),
     );
   }
@@ -249,7 +299,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return Column(
       children: [
         const Text(
-          'Ruszamy App',
+          'Utwórz konto',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 32,
@@ -258,7 +308,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Zaloguj się i znajdź ludzi do wspólnej aktywności.',
+          'Dołącz do Ruszamy App i zacznij tworzyć sportowe wydarzenia.',
           textAlign: TextAlign.center,
           style: TextStyle(
             color: Colors.grey.shade700,
@@ -269,7 +319,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget buildLoginForm() {
+  Widget buildRegisterForm() {
     return Column(
       children: [
         TextField(
@@ -287,11 +337,45 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         const SizedBox(height: 14),
         TextField(
+          controller: usernameController,
+          textInputAction: TextInputAction.next,
+          autofillHints: const [
+            AutofillHints.username,
+          ],
+          decoration: const InputDecoration(
+            labelText: 'Nazwa użytkownika',
+            hintText: 'np. pawel',
+            prefixIcon: Icon(Icons.person),
+          ),
+        ),
+        const SizedBox(height: 14),
+        TextField(
+          controller: cityController,
+          textInputAction: TextInputAction.next,
+          decoration: const InputDecoration(
+            labelText: 'Miasto',
+            hintText: 'np. Wrocław',
+            prefixIcon: Icon(Icons.location_city),
+          ),
+        ),
+        const SizedBox(height: 14),
+        TextField(
+          controller: ageController,
+          keyboardType: TextInputType.number,
+          textInputAction: TextInputAction.next,
+          decoration: const InputDecoration(
+            labelText: 'Wiek',
+            hintText: 'np. 25',
+            prefixIcon: Icon(Icons.cake),
+          ),
+        ),
+        const SizedBox(height: 14),
+        TextField(
           controller: passwordController,
           obscureText: !isPasswordVisible,
-          textInputAction: TextInputAction.done,
+          textInputAction: TextInputAction.next,
           autofillHints: const [
-            AutofillHints.password,
+            AutofillHints.newPassword,
           ],
           decoration: InputDecoration(
             labelText: 'Hasło',
@@ -308,8 +392,33 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ),
+        ),
+        const SizedBox(height: 14),
+        TextField(
+          controller: confirmPasswordController,
+          obscureText: !isConfirmPasswordVisible,
+          textInputAction: TextInputAction.done,
+          autofillHints: const [
+            AutofillHints.newPassword,
+          ],
+          decoration: InputDecoration(
+            labelText: 'Powtórz hasło',
+            hintText: 'Wpisz hasło ponownie',
+            prefixIcon: const Icon(Icons.lock_outline),
+            suffixIcon: IconButton(
+              tooltip:
+                  isConfirmPasswordVisible ? 'Ukryj hasło' : 'Pokaż hasło',
+              onPressed: toggleConfirmPasswordVisibility,
+              icon: Icon(
+                isConfirmPasswordVisible
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
           onSubmitted: (_) {
-            login();
+            register();
           },
         ),
         const SizedBox(height: 16),
@@ -326,36 +435,25 @@ class _LoginScreenState extends State<LoginScreen> {
         if (errorMessage.isNotEmpty || successMessage.isNotEmpty)
           const SizedBox(height: 12),
         PrimaryActionButton(
-          icon: Icons.login,
-          label: 'Zaloguj',
-          loadingLabel: 'Logowanie...',
+          icon: Icons.person_add,
+          label: 'Utwórz konto',
+          loadingLabel: 'Tworzenie konta...',
           isLoading: isLoading,
-          onPressed: login,
+          onPressed: register,
         ),
       ],
     );
   }
 
-  Widget buildRegisterButton() {
-    return Column(
-      children: [
-        Text(
-          'Nie masz jeszcze konta?',
-          style: TextStyle(
-            color: Colors.grey.shade700,
-          ),
-        ),
-        const SizedBox(height: 10),
-        SizedBox(
-          height: 46,
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: isLoading ? null : openRegisterScreen,
-            icon: const Icon(Icons.person_add),
-            label: const Text('Utwórz konto'),
-          ),
-        ),
-      ],
+  Widget buildBackToLoginButton() {
+    return SizedBox(
+      height: 46,
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: isLoading ? null : backToLogin,
+        icon: const Icon(Icons.arrow_back),
+        label: const Text('Mam już konto'),
+      ),
     );
   }
 }

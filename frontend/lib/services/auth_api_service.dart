@@ -6,14 +6,32 @@ import '../config/api_config.dart';
 import '../models/user_profile.dart';
 
 class AuthApiService {
+  String getErrorDetail(http.Response response) {
+    try {
+      final dynamic decodedBody = jsonDecode(response.body);
+
+      if (decodedBody is Map<String, dynamic>) {
+        final dynamic detail = decodedBody['detail'];
+
+        if (detail is String) {
+          return detail;
+        }
+
+        return detail.toString();
+      }
+
+      return response.body;
+    } catch (_) {
+      return response.body;
+    }
+  }
+
   Future<String> login({
     required String email,
     required String password,
   }) async {
-    final Uri url = Uri.parse('${ApiConfig.baseUrl}/auth/login');
-
     final http.Response response = await http.post(
-      url,
+      Uri.parse('${ApiConfig.baseUrl}/auth/login'),
       headers: {
         'Content-Type': 'application/json',
       },
@@ -23,33 +41,67 @@ class AuthApiService {
       }),
     );
 
-    if (response.statusCode != 200) {
-      throw Exception('Nieprawidłowy e-mail lub hasło');
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final Map<String, dynamic> decodedBody = jsonDecode(response.body);
+
+      final dynamic token = decodedBody['access_token'];
+
+      if (token is String && token.isNotEmpty) {
+        return token;
+      }
+
+      throw Exception('Backend nie zwrócił tokenu access_token.');
     }
 
-    final Map<String, dynamic> data = jsonDecode(response.body);
+    throw Exception(getErrorDetail(response));
+  }
 
-    return data['access_token'];
+  Future<UserProfile> register({
+    required String email,
+    required String username,
+    required String password,
+    String? city,
+    int? age,
+  }) async {
+    final http.Response response = await http.post(
+      Uri.parse('${ApiConfig.baseUrl}/auth/register'),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'email': email,
+        'username': username,
+        'password': password,
+        'city': city,
+        'age': age,
+      }),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final Map<String, dynamic> decodedBody = jsonDecode(response.body);
+
+      return UserProfile.fromJson(decodedBody);
+    }
+
+    throw Exception(getErrorDetail(response));
   }
 
   Future<UserProfile> getCurrentUser({
     required String token,
   }) async {
-    final Uri url = Uri.parse('${ApiConfig.baseUrl}/auth/me');
-
     final http.Response response = await http.get(
-      url,
+      Uri.parse('${ApiConfig.baseUrl}/auth/me'),
       headers: {
         'Authorization': 'Bearer $token',
       },
     );
 
-    if (response.statusCode != 200) {
-      throw Exception('Nie udało się pobrać profilu użytkownika');
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final Map<String, dynamic> decodedBody = jsonDecode(response.body);
+
+      return UserProfile.fromJson(decodedBody);
     }
 
-    final Map<String, dynamic> data = jsonDecode(response.body);
-
-    return UserProfile.fromJson(data);
+    throw Exception(getErrorDetail(response));
   }
 }
