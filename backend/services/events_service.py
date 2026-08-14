@@ -369,7 +369,7 @@ def update_event(
                 detail="Nie jesteś członkiem grupy"
             )
     
-    event.group_id = event_data.group_id
+        event.group_id = event_data.group_id
 
     if event_data.title is not None:
         event.title = event_data.title
