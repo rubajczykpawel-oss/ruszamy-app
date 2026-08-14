@@ -1,9 +1,14 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import Base, engine
+from logger_config import logger
 from routers import auth_router, users_router, events_router, groups_router, friends_router
 
+logger.info("Starting Ruszamy API")
+
 Base.metadata.create_all(bind=engine)
+
+logger.info("Database tables initialized")
 
 app = FastAPI(
     title="Ruszamy API",
@@ -19,14 +24,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/")
-def root():
-    return {
-        "message": "Ruszamy Api działa"
-    }
 
 app.include_router(auth_router.router)
 app.include_router(users_router.router)
 app.include_router(events_router.router)
 app.include_router(friends_router.router)
 app.include_router(groups_router.router)
+
+logger.info("Application routers registered")
+
+
+@app.get("/")
+def root():
+    return {"message": "Ruszamy Api działa"}
