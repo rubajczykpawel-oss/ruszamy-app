@@ -1,8 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from database import Base, engine
 from logger_config import logger
-from routers import auth_router, users_router, events_router, groups_router, friends_router
+from routers import (
+    auth_router,
+    events_router,
+    friends_router,
+    groups_router,
+    users_router,
+)
 
 logger.info("Starting Ruszamy API")
 
