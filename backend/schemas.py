@@ -1,4 +1,6 @@
-from datetime import datetime, date as DateType, time as TimeType
+from datetime import date as DateType
+from datetime import datetime
+from datetime import time as TimeType
 from typing import Optional
 
 from pydantic import BaseModel

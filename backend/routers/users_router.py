@@ -7,7 +7,6 @@ from models import User
 from schemas import UserResponse, UserUpdate
 from services import users_service
 
-
 router = APIRouter(
     prefix="/users",
     tags=["Users"]

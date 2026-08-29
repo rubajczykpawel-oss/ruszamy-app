@@ -4,9 +4,8 @@ from sqlalchemy.orm import Session
 from auth import get_current_user
 from database import get_db
 from models import User
-from schemas import UserResponse, FriendshipResponse
+from schemas import FriendshipResponse, UserResponse
 from services import friends_service
-
 
 router = APIRouter(
     prefix="/friends",

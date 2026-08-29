@@ -4,9 +4,14 @@ from sqlalchemy.orm import Session
 from auth import get_current_user
 from database import get_db
 from models import User
-from schemas import GroupCreate, GroupMemberResponse, GroupResponse, GroupMemberWithUserResponse, GroupUpdate
+from schemas import (
+    GroupCreate,
+    GroupMemberResponse,
+    GroupMemberWithUserResponse,
+    GroupResponse,
+    GroupUpdate,
+)
 from services import groups_service
-
 
 router = APIRouter(
     prefix="/groups",

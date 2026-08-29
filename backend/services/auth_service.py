@@ -1,8 +1,10 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
+
 from auth import create_access_token, hash_password, verify_password
 from models import User
 from schemas import LoginRequest, UserCreate
+
 
 def register_user(user_data: UserCreate, db: Session) -> User:
     existing_email = db.query(User).filter(User.email == user_data.email).first()
@@ -13,8 +15,11 @@ def register_user(user_data: UserCreate, db: Session) -> User:
             detail="Użytkownik z takim emailem juz istnieje"
         )
     
-    existing_username = db.query(User).filter(User.username == user_data.username).first()
-
+    existing_username = (
+        db.query(User)
+        .filter(User.username == user_data.username)
+        .first()
+    )
     if existing_username:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

@@ -10,14 +10,20 @@ from models import Friendship, User
 def friendship_exists_between_users(
     db: Session,
     user_id_1: int,
-    user_id_2: int
+    user_id_2: int,
 ) -> Friendship | None:
     friendship = (
         db.query(Friendship)
         .filter(
             or_(
-                (Friendship.requester_id == user_id_1) & (Friendship.receiver_id == user_id_2),
-                (Friendship.requester_id == user_id_2) & (Friendship.receiver_id == user_id_1)
+                (
+                    (Friendship.requester_id == user_id_1)
+                    & (Friendship.receiver_id == user_id_2)
+                ),
+                (
+                    (Friendship.requester_id == user_id_2)
+                    & (Friendship.receiver_id == user_id_1)
+                ),
             )
         )
         .first()
@@ -25,18 +31,23 @@ def friendship_exists_between_users(
 
     return friendship
 
-
 def are_users_friends(
     db: Session,
     user_id_1: int,
-    user_id_2: int
+    user_id_2: int,
 ) -> bool:
     friendship = (
         db.query(Friendship)
         .filter(
             or_(
-                (Friendship.requester_id == user_id_1) & (Friendship.receiver_id == user_id_2),
-                (Friendship.requester_id == user_id_2) & (Friendship.receiver_id == user_id_1)
+                (
+                    (Friendship.requester_id == user_id_1)
+                    & (Friendship.receiver_id == user_id_2)
+                ),
+                (
+                    (Friendship.requester_id == user_id_2)
+                    & (Friendship.receiver_id == user_id_1)
+                ),
             )
         )
         .filter(Friendship.status == "accepted")
@@ -215,42 +226,50 @@ def get_my_friends(
 def remove_friend(
     friend_id: int,
     db: Session,
-    current_user: User
+    current_user: User,
 ) -> dict:
     if friend_id is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Nie możesz usunąć samego siebie"
+            detail="Nie możesz usunąć samego siebie",
         )
-    
+
     friend = db.query(User).filter(User.id == friend_id).first()
 
     if friend is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Nie znaleziono użytkownika"
+            detail="Nie znaleziono użytkownika",
         )
-    
+
     friendship = (
-                db.query(Friendship)
-                .filter(
-                    or_(
-                        (Friendship.requester_id == current_user.id) & (Friendship.receiver_id == friend_id),
-                        (Friendship.requester_id == friend_id) & (Friendship.receiver_id == current_user.id)
-                    )
-                )
-                .filter(Friendship.status == "accepted").first()
+        db.query(Friendship)
+        .filter(
+            or_(
+                (
+                    (Friendship.requester_id == current_user.id)
+                    & (Friendship.receiver_id == friend_id)
+                ),
+                (
+                    (Friendship.requester_id == friend_id)
+                    & (Friendship.receiver_id == current_user.id)
+                ),
+            )
+        )
+        .filter(Friendship.status == "accepted")
+        .first()
     )
 
     if friendship is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Nie znaleziono zaakceptowanej znajomości"
+            detail="Nie znaleziono zaakceptowanej znajomości",
         )
-    
+
     db.delete(friendship)
     db.commit()
 
     return {
-        "message": "Znajomy został usunięty"
+        "message": "Znajomy został usunięty",
     }
+    

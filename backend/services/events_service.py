@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from models import Event, EventParticipant, GroupMember, User
 from schemas import EventCreate, EventUpdate
 
+
 def add_participants_count(
         event: Event,
         db: Session
@@ -79,7 +80,7 @@ def get_events(
     city: str | None = None,
     activity_type: str | None = None
 ) -> list[Event]:
-    query = db.query(Event).filter(Event.is_public == True)
+    query = db.query(Event).filter(Event.is_public)
 
     if city is not None:
         query = query.filter(Event.city.ilike(f"%{city}%"))
@@ -152,7 +153,9 @@ def join_event(
         if group_member is None:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Nie możesz dołączyć do wydarzenia grupowego, jeśli nie jesteś w grupie"
+                detail=("Nie możesz dołączyć do wydarzenia grupowego,"
+                "jeśli nie jesteś w grupie"
+                )
             )
 
     existing_participation = (
@@ -209,7 +212,9 @@ def leave_event(
     if event.creator_id == current_user.id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Twórca wydarzenia nie może opuścić własnego wydarzenia. Może je usunąć."
+            detail=("Twórca wydarzenia nie może opuścić własnego wydarzenia. "
+                    "Może je usunąć."
+            )
         )
 
     participation = (
@@ -304,7 +309,9 @@ def get_event_participants(
         if group_member is None:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Uczestników wydarzenia grupowego mogą zobaczyć tylko członkowie grupy"
+                detail=("Uczestników wydarzenia grupowego mogą zobaczyć tylko " 
+                        "członkowie grupy"
+                )
             )
 
     participants = (
@@ -351,7 +358,9 @@ def update_event(
         if event_data.max_participants < participants_count:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Nowy limit uczestników nie może być mniejszy niż obecna liczba zapisanych osób"
+                detail=("Nowy limit uczestników nie może być mniejszy niż " 
+                        "obecna liczba zapisanych osób"
+                )
             )
         
         event.max_participants = event_data.max_participants
